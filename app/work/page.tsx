@@ -1,2 +1,2 @@
 import { Footer, Header, PageIntro, ProjectGrid } from '../site';
-export default function Work() { return <><Header /><main><PageIntro label="Selected work" title="Projects built to move ideas forward." /><ProjectGrid /></main><Footer /></>; }
+export default function Work() { return <><Header /><main><PageIntro label="" title="Work that builds brands, digital products, and campaigns with purpose, clarity, and impact." /><div className="filters"><button>All</button><button>Brand</button><button>Digital</button><button>Campaign</button><button className="sector">Sector⌄</button></div><ProjectGrid /></main><Footer /></>; }
