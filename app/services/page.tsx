@@ -1,0 +1,3 @@
+import { Footer, Header, PageIntro } from '../site';
+const services = [['Brand foundations','Positioning, naming and identity systems that make the idea easier to recognise.'],['Digital experiences','Websites and product interfaces shaped around a clear story and useful interaction.'],['Creative direction','A practical visual language for launches, campaigns and ongoing communication.']];
+export default function Services(){return <><Header/><main><PageIntro label="Services" title="From the first thought to the thing people use."/><div className="service-list">{services.map(([title,text],i)=><article key={title}><span>0{i+1}</span><h2>{title}</h2><p>{text}</p></article>)}</div></main><Footer/></>}

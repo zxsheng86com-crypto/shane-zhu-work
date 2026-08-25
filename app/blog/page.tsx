@@ -1,0 +1,2 @@
+import Link from 'next/link'; import { Footer, Header, PageIntro, posts } from '../site';
+export default function Blog(){return <><Header/><main><PageIntro label="Blog" title="Notes on making things clear."/><div className="post-list">{posts.map(post=><Link href={`/blog/${post.slug}`} key={post.slug}><span>{post.date}</span><h2>{post.title}</h2><p>{post.kind} ↗</p></Link>)}</div></main><Footer/></>}
