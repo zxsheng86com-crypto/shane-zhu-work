@@ -13,6 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head><meta name="pinterest" content="nopin" /></head>
       <body>{children}</body>
     </html>
   );
