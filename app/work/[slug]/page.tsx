@@ -30,8 +30,8 @@ function Placeholder({ number, projectSlug, tone = 'dark' }: { number: number; p
   </figure>;
 }
 
-function Story({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className={`case-text ${title.toLowerCase()}`}><div><h2>{title}</h2></div><p>{children}</p></section>;
+function Story({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+  return <section className={`case-text ${title.toLowerCase()}`}><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div><p>{children}</p></section>;
 }
 
 const description = 'Use this paragraph for the chapter description. Replace it with the project context, design decisions, and the purpose of the work shown below.';
@@ -125,42 +125,42 @@ export default async function Project({ params }: { params: Promise<{ slug: stri
           <section className="media-block media-pair"><Placeholder number={15} projectSlug={slug} /><Placeholder number={16} projectSlug={slug} /></section>
           <section className="media-block"><Placeholder number={17} projectSlug={slug} /></section>
         </> : <>
-        <Story title={slug === 'common-ground' ? '设计策略：以简驭繁' : '挑战'}>{slug === 'common-ground' ? 'ROMO 采用透明机身，将内部结构与精密部件直接呈现给用户。基于这一产品特征，UI 将“结构可视化”确立为核心设计语言：以设备内部结构作为视觉锚点，并延伸至 App 的功能表达中。界面则通过克制的色彩、排版与留白降低视觉干扰，以简洁的 UI 衬托产品结构的精密感，在硬件与数字体验之间建立一致的品牌表达。' : description}</Story>
+        <Story title={slug === 'common-ground' ? '设计策略' : '挑战'} subtitle={slug === 'common-ground' ? '建立品类差异，统一软硬件体验' : undefined}>{slug === 'common-ground' ? 'ROMO 作为后进入者，需要摆脱成熟品类中趋同的界面表达，建立清晰、可识别的产品气质；同时，透明 ID 将内部精密结构直接呈现给用户，软件也需要延续这一硬件特征。基于这两点，UI 以结构可视化和功能动效建立差异，并通过克制的色彩、排版与留白，让设备与 App 形成统一的视觉体验。' : description}</Story>
         <section className="media-block"><Placeholder number={2} projectSlug={slug} /></section>
 
-        <Story title="APP ICON">{slug === 'common-ground' ? '从扫地机器人清洁过程中的“扩散与吸入”动作中提取运动轨迹，并将其抽象为图形语言，使图标既能关联产品功能，也具备独立的识别特征。' : description}</Story>
+        <Story title="APP ICON" subtitle={slug === 'common-ground' ? '把清洁轨迹变成品牌符号' : undefined}>{slug === 'common-ground' ? '提取扫地机器人运行中的扩散与吸入动作，将动态轨迹转化为图形语言。Icon 不直接描绘设备外形，而是用产品特有的工作方式建立识别，在保持简洁的同时形成 ROMO 独有的科技感。' : description}</Story>
         <section className="media-block media-pair"><Placeholder number={3} projectSlug={slug} /><Placeholder number={4} projectSlug={slug} /></section>
 
-        <Story title="HOME PAGE">{slug === 'common-ground' ? '首页延续“结构可视化”的设计语言，将基站状态与清洁过程转化为实时动效，使设备状态能够被直接感知。为适配不同产品型号，视觉内容采用设备、动效、UI 与背景的分层结构。开发时可根据不同型号替换对应素材，提升后续适配与维护效率。' : description}</Story>
+        <Story title="HOME PAGE" subtitle={slug === 'common-ground' ? '以简驭繁，让设备状态直观可见' : undefined}>{slug === 'common-ground' ? '同类产品的首页通常以白底静态设备图呈现，设备图本身不承载状态信息。ROMO 的透明 ID 具有精密而复杂的结构，因此首页以精细的设备动态效果作为视觉核心，UI 则保持克制、直白，以简洁界面衬托硬件细节。设备图会随运行状态实时变化，用户无需进入二级页面即可直观看见设备正在做什么，也让每次打开 App 都能获得鲜活、可感知的状态反馈。' : description}</Story>
         <section className="media-block media-pair"><Placeholder number={5} projectSlug={slug} /><Placeholder number={6} projectSlug={slug} /></section>
         <section className="media-block"><Placeholder number={7} projectSlug={slug} /></section>
         <section className="media-block"><Placeholder number={8} projectSlug={slug} /></section>
 
-        <Story title="小组件">{slug === 'common-ground' ? '桌面小组件延续首页的机械刻度语言，让用户无需进入 App，即可快速查看设备状态与清洁进度。' : description}</Story>
+        <Story title="小组件" subtitle={slug === 'common-ground' ? '把高频状态带到系统桌面' : undefined}>{slug === 'common-ground' ? '小组件延续首页的机械刻度与结构语言，把设备状态、清洁进度和常用操作前置到系统桌面，减少进入 App 和层级跳转。' : description}</Story>
         <section className="media-block"><Placeholder number={9} projectSlug={slug} /></section>
 
-        <Story title={slug === 'common-ground' ? '状态反馈' : '定时清洁'}>{slug === 'common-ground' ? '针对定时清洁等高频场景，在任务触发时通过闹钟图标的状态动效提供即时反馈，帮助用户确认任务已经启动。' : description}</Story>
+        <Story title={slug === 'common-ground' ? '状态反馈' : '定时清洁'} subtitle={slug === 'common-ground' ? '让任务来源一眼可知' : undefined}>{slug === 'common-ground' ? '定时计划触发时，首页闹钟图标以专属动效进入执行状态，区别于手动清洁，让用户直接知道设备正在执行哪类任务。连续的状态过渡也让任务从触发到执行衔接得更加自然。' : description}</Story>
         <section className="media-block media-stack reverse"><div><Placeholder number={10} projectSlug={slug} /><Placeholder number={11} projectSlug={slug} /></div><Placeholder number={12} projectSlug={slug} /></section>
 
-        <Story title="基站功能">{slug === 'common-ground' ? '将基站的多项功能整合进可展开、收拢的面板结构，通过局部放大与部件映射，建立功能与实体部件之间的对应关系。模块化的动效结构能够适配后续功能与设备变化，降低新增功能对整体界面的影响。' : description}</Story>
+        <Story title="基站功能" subtitle={slug === 'common-ground' ? '让耗材状态可见，让部件动效可复用' : undefined}>{slug === 'common-ground' ? '基站入口以透明化结构呈现尘袋、拖布等耗材状态，剩余寿命随使用实时变化，并在临近耗尽时转为红色提示。执行基站任务时，入口通过强化动效明确当前状态。弹窗动效聚焦拖布、尘袋等局部部件，而非绑定整机外观，使同一套表达能够适配不同设备结构和后续产品迭代。' : description}</Story>
         <section className="media-block"><Placeholder number={13} projectSlug={slug} /></section>
         <section className="media-block media-pair"><Placeholder number={14} projectSlug={slug} /><Placeholder number={15} projectSlug={slug} /></section>
         <section className="media-block"><Placeholder number={16} projectSlug={slug} /></section>
 
-        <Story title="地图设计">{slug === 'common-ground' ? '区别于竞品常见的大面积色块方案，地图采用更克制的色彩与信息层级，减少视觉干扰，突出清洁区域、设备位置与任务状态。同时为家具、禁区和门槛等地图元素建立统一的编辑规则，使复杂地图操作保持清晰、一致。' : description}</Story>
+        <Story title="地图设计" subtitle={slug === 'common-ground' ? '弱化无效色彩，突出路径、状态与操作' : undefined}>{slug === 'common-ground' ? '同类产品通常使用多种色块区分房间，但有限的颜色会被重复使用，并不能稳定表达房间之间的真实关系。ROMO 在保留区域识别的基础上弱化装饰性色彩，将视觉重点留给设备路径、工作状态和地图编辑操作，使复杂操作更清晰，也与透明硬件的整体调性保持一致。' : description}</Story>
         <section className="media-block"><Placeholder number={17} projectSlug={slug} /></section>
         <section className="media-block media-pair"><Placeholder number={18} projectSlug={slug} /><Placeholder number={19} projectSlug={slug} /></section>
 
-        <Story title="清洁模式设置">{slug === 'common-ground' ? '采用“左侧信息、右侧控件”的布局方式，并根据参数特征定义点按与滑动两类交互方式，使更多清洁参数能够在统一结构中扩展。状态切换通过连续的过渡动效建立视觉关联，帮助用户理解设置前后的变化。' : description}</Story>
+        <Story title="清洁模式设置" subtitle={slug === 'common-ground' ? '用两类控件统一复杂参数' : undefined}>{slug === 'common-ground' ? '清洁参数采用“左侧信息、右侧控件”的统一结构，并根据操作特征收敛为点按与滑动两种类型。用户可以沿用同一套操作方式，后续新增参数也不需要改变页面结构。' : description}</Story>
         <section className="media-block media-pair"><Placeholder number={20} projectSlug={slug} /><Placeholder number={21} projectSlug={slug} /></section>
 
-        <Story title="添加设备">{slug === 'common-ground' ? '通过清晰的步骤引导与状态动效呈现配网进度，降低等待过程中的不确定感，并保持整体体验与 ROMO 视觉语言的一致性。' : description}</Story>
+        <Story title="添加设备" subtitle={slug === 'common-ground' ? '让配网过程始终有反馈' : undefined}>{slug === 'common-ground' ? '配网过程通过连续动效呈现当前步骤、连接进度和设备状态，让用户始终知道系统正在执行什么，也让等待过程保持连贯。' : description}</Story>
         <section className="media-block"><Placeholder number={22} projectSlug={slug} /></section>
 
-        <Story title="远程视频监控">{slug === 'common-ground' ? '采用沉浸式全屏预览，将语音、巡航等操作收纳至画面边缘，减少控件对核心视频内容的遮挡。通过清晰的控制层级与状态反馈，让用户能够快速完成查看、通话和设备控制。' : description}</Story>
+        <Story title="远程视频监控" subtitle={slug === 'common-ground' ? '画面优先，操作随用随现' : undefined}>{slug === 'common-ground' ? '远程监控采用沉浸式全屏预览，将双向语音、巡航等操作收拢至画面边缘，避免控件持续遮挡核心内容。操作根据使用状态出现，在保证画面完整的同时，让高频功能保持快速可达。' : description}</Story>
         <section className="media-block"><Placeholder number={23} projectSlug={slug} /></section>
 
-        <Story title={slug === 'common-ground' ? '设备设置与场景' : '设备设置'}>{slug === 'common-ground' ? '将抽象参数转化为可感知的图形与动效。例如在宠物模式和地毯模式中，通过设备状态演示解释功能的运行与识别逻辑。配合统一的图标系统与交互结构，降低用户理解复杂设置的成本。' : description}</Story>
+        <Story title={slug === 'common-ground' ? '设备设置与场景' : '设备设置'} subtitle={slug === 'common-ground' ? '用可视化解释设备如何工作' : undefined}>{slug === 'common-ground' ? '宠物模式、地毯模式等设置涉及设备内部运行逻辑，仅靠文字很难理解。设备动效和状态图形直接演示模式变化，把抽象参数转化为可以看到的运行结果。' : description}</Story>
         <section className="media-block media-stack reverse"><div><Placeholder number={24} projectSlug={slug} /><Placeholder number={25} projectSlug={slug} /></div><Placeholder number={26} projectSlug={slug} /></section>
         <section className="media-block"><Placeholder number={27} projectSlug={slug} /></section>
         <section className="media-block"><Placeholder number={28} projectSlug={slug} /></section>
