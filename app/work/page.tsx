@@ -1,2 +1,12 @@
-import { Footer, Header, PageIntro, ProjectGrid } from '../site';
-export default function Work() { return <><Header /><main><PageIntro label="" title="Work that builds brands, digital products, and campaigns with purpose, clarity, and impact." /><div className="filters"><button>All</button><button>Brand</button><button>Digital</button><button>Campaign</button><button className="sector">Sector⌄</button></div><ProjectGrid /></main><Footer /></>; }
+import { Header, ProjectGrid } from '../site';
+import { SiteCloseFooter } from '../site-close-footer';
+
+export default function Work() {
+  return <>
+    <Header />
+    <main className="work-index">
+      <ProjectGrid />
+      <SiteCloseFooter close={false} />
+    </main>
+  </>;
+}

@@ -7,18 +7,28 @@ export function RevealFlow({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const flow = ref.current;
-    if (!flow) return;
+    if (!flow || typeof IntersectionObserver === 'undefined') return;
     const items = [...flow.children];
+    // Keep content already seen during loading visible when animation starts.
+    items.forEach((item) => {
+      if (item.getBoundingClientRect().top < window.innerHeight) {
+        item.classList.add('is-visible');
+      }
+    });
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
         entry.target.classList.add('is-visible');
         observer.unobserve(entry.target);
       });
+      flow.classList.add('reveal-ready');
     }, { threshold: 0.12, rootMargin: '0px 0px -6%' });
     items.forEach((item) => observer.observe(item));
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      flow.classList.remove('reveal-ready');
+    };
   }, []);
 
-  return <div ref={ref} className="case-flow reveal-ready">{children}</div>;
+  return <div ref={ref} className="case-flow">{children}</div>;
 }

@@ -36,3 +36,8 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# local scratch / backups
+.backups/
+_tmp_*
+*.tsbuildinfo

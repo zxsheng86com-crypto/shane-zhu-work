@@ -1,0 +1,72 @@
+import assert from 'node:assert/strict';
+const imported = await import(process.argv[2] || 'playwright');
+const { chromium, webkit } = imported.default ?? imported;
+const desktopOnlyUpdatedVideos = new Set([
+  'common-ground/14', 'common-ground/18',
+  'dji-avinox/06', 'dji-avinox/09', 'dji-avinox/12', 'dji-avinox/14', 'dji-avinox/16', 'dji-avinox/22',
+  'dji-power/03', 'dji-power/16', 'dji-aura-logo/06',
+]);
+const browser = await (process.argv.includes('--webkit') ? webkit.launch() : chromium.launch({ channel: 'chrome', headless: true }));
+try {
+  const projects = [
+    ['common-ground', 29],
+    ['dji-avinox', 32],
+    ['dji-power', 18],
+    ['dji-aura-logo', 12],
+  ];
+  const mobile = !process.argv.includes('--desktop');
+  for (const [slug, count] of projects) {
+  const page = await browser.newPage({ viewport: { width: mobile ? 390 : 1440, height: 844 }, isMobile: mobile, hasTouch: mobile });
+  const failures = [];
+  page.on('response', response => {
+    if (response.url().includes('/media/') && response.status() >= 400) failures.push(`${response.status()} ${response.url()}`);
+  });
+  await page.goto(`http://localhost:3000/work/${slug}`);
+  const figures = page.locator('.placeholder.has-media');
+  assert.equal(await figures.count(), count);
+  for (let index = 0; index < count; index++) {
+    const figure = figures.nth(index);
+    await figure.scrollIntoViewIfNeeded();
+    const slot = await figure.locator('.slot-number').textContent();
+    const media = figure.locator('img,video');
+    const state = await media.evaluate(async e => {
+      if (e.tagName === 'IMG') {
+        await e.decode();
+        return { src: e.currentSrc, width: e.naturalWidth, height: e.naturalHeight };
+      }
+      await new Promise((resolve, reject) => {
+        const timer = setInterval(() => {
+          if (e.error) { clearInterval(timer); reject(new Error(e.error.message)); }
+          else if (e.readyState >= 2 && e.currentTime > 0) { clearInterval(timer); resolve(); }
+        }, 100);
+        setTimeout(() => { clearInterval(timer); reject(new Error(`Playback timed out: ${e.currentSrc}`)); }, 15000);
+      });
+      return { src: e.currentSrc, width: e.videoWidth, height: e.videoHeight };
+    });
+    assert(state.width > 0 && state.height > 0);
+    if (new URL(state.src).pathname.endsWith('.mp4')) {
+      assert.equal(state.src.includes('/mobile/'), mobile && !desktopOnlyUpdatedVideos.has(`${slug}/${slot}`));
+    }
+    if (slug === 'dji-aura-logo' && index === 3) {
+      const delay = await media.evaluate(e => new Promise((resolve, reject) => {
+        let endedAt;
+        const timeout = setTimeout(() => reject(new Error('Loop replay timed out')), 8000);
+        e.addEventListener('ended', () => { endedAt = performance.now(); }, { once: true });
+        const playing = () => {
+          if (!endedAt) return;
+          clearTimeout(timeout);
+          e.removeEventListener('playing', playing);
+          resolve(performance.now() - endedAt);
+        };
+        e.addEventListener('playing', playing);
+        e.currentTime = e.duration - .15;
+      }));
+      assert(delay >= 900, `AURA replayed too early: ${delay}ms`);
+      console.log(`PASS AURA 04: replay delay ${Math.round(delay)}ms`);
+    }
+  }
+  assert.deepEqual(failures, []);
+  console.log(`PASS ${slug}: all ${count} assets, mobile source selection, no failed media responses`);
+  await page.close();
+  }
+} finally { await browser.close(); }
