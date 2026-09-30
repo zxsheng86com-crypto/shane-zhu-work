@@ -48,7 +48,7 @@ const catalogs: Record<ProjectSlug, CaseCatalog> = {
     href: '/work/dji-avinox',
     folder: 'dji-avinox',
     videoSlots: new Set([2, 4, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 22, 23, 24, 25, 29, 31]),
-    version: '20260930-r14',
+    version: '20260930-safari1',
     maxSlot: 32,
   },
   'dji-power': {

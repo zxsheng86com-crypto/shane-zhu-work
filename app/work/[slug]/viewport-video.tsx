@@ -12,6 +12,23 @@ export const videoLoopDelays: Record<string, number> = {
  * Eager slots start decoding under the entry gate; play only after the gate opens.
  */
 
+function isSafari() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|Firefox|Android/i.test(ua);
+}
+
+/** Safari: one eager bind at a time. */
+let safariEagerTail: Promise<void> = Promise.resolve();
+function enqueueSafariEagerBind(task: () => Promise<void>) {
+  const run = safariEagerTail.then(task, task);
+  safariEagerTail = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
 function isNarrowViewport() {
   return typeof window !== 'undefined' && window.matchMedia('(max-width: 800px)').matches;
 }
@@ -231,6 +248,17 @@ export function ViewportVideo({
     };
 
     const onError = () => {
+      // Desktop AE exports can exceed Safari decode limits — fall back to mobile MP4.
+      if (
+        mobile
+        && !wantRef.current.includes('/mobile/')
+        && stripQuery(mobileSrc) !== stripQuery(wantRef.current)
+      ) {
+        bound = false;
+        hide();
+        setActiveSrc(mobileSrc);
+        return;
+      }
       if (
         mobile
         && wantRef.current.includes('/mobile/')
@@ -264,7 +292,29 @@ export function ViewportVideo({
         img.decoding = 'async';
         img.src = poster;
       }
-      ensureBound();
+      // Safari has a tiny hardware decode pool — don't stampede AE-sized MP4s.
+      if (isSafari()) {
+        void enqueueSafariEagerBind(() => {
+          if (!cancelled) ensureBound();
+          return new Promise<void>((resolve) => {
+            if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+              resolve();
+              return;
+            }
+            const done = () => {
+              video.removeEventListener('loadeddata', done);
+              video.removeEventListener('error', done);
+              window.clearTimeout(timer);
+              resolve();
+            };
+            const timer = window.setTimeout(done, 10000);
+            video.addEventListener('loadeddata', done);
+            video.addEventListener('error', done);
+          });
+        });
+      } else {
+        ensureBound();
+      }
     }
 
     return () => {
@@ -286,7 +336,7 @@ export function ViewportVideo({
       reducedMotion.removeEventListener('change', onVisibility);
       freeze();
     };
-  }, [activeSrc, src, mobile, loopDelayMs, poster, entryReady, eager]);
+  }, [activeSrc, src, mobile, mobileSrc, loopDelayMs, poster, entryReady, eager]);
 
   return (
     <span className={`case-video${ready ? ' is-ready' : ''}${poster ? ' has-poster' : ''}`}>

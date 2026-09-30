@@ -80,7 +80,7 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
     : src && projectSlug === 'dji-fly'
       ? `${src}?v=20260930-jpg`
     : src && projectSlug === 'common-ground' ? `${src}?v=20260930-jpg`
-      : src && projectSlug === 'dji-avinox' ? `${src}?v=20260930-r14` : src;
+      : src && projectSlug === 'dji-avinox' ? `${src}?v=20260930-safari1` : src;
   const useMobile = Boolean(media && media.videos.has(slot) && hasMobileVideo(media.folder, slot));
   const poster = media && media.videos.has(slot) ? posterFor(media.folder, slot) : undefined;
   const lqip = media && !media.videos.has(slot) ? lqipFor(media.folder, slot) : undefined;

@@ -1,271 +1,7 @@
 {
-  "/media/dji-aura/01.mp4": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-aura/02.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-aura/03.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-aura/04.mp4": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-aura/05.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-aura/06.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-aura/07.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-aura/08.mp4": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-aura/09.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-aura/10.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-aura/11.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-aura/12.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/01.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/02.mp4": {
-    "width": 3112,
-    "height": 1750
-  },
-  "/media/dji-avinox/03.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-avinox/04.mp4": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-avinox/05.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/06.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/07.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/08.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/09.mp4": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/10.mp4": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-avinox/11.mp4": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-avinox/12.mp4": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/13.mp4": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-avinox/14.mp4": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-avinox/15.mp4": {
-    "width": 1920,
-    "height": 1080
-  },
-  "/media/dji-avinox/16.mp4": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/17.mp4": {
-    "width": 2160,
-    "height": 1326
-  },
-  "/media/dji-avinox/18.mp4": {
-    "width": 2160,
-    "height": 1326
-  },
-  "/media/dji-avinox/19.mp4": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-avinox/20.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/21.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-avinox/22.mp4": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-avinox/23.mp4": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/24.mp4": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-avinox/25.mp4": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-avinox/26.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-avinox/27.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-avinox/28.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/29.mp4": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/30.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-avinox/31.mp4": {
-    "width": 2160,
-    "height": 1214
-  },
-  "/media/dji-avinox/32.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-power/01.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-power/02.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-power/03.mp4": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-power/04.jpg": {
-    "width": 2161,
-    "height": 2700
-  },
-  "/media/dji-power/05.jpg": {
-    "width": 2161,
-    "height": 2700
-  },
-  "/media/dji-power/06.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-power/07.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-power/08.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-power/09.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-power/10.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-power/11.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-power/12.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-power/13.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-power/14.mp4": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-power/15.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-power/16.mp4": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-power/17.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-power/18.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-romo/01.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
   "/media/dji-romo/02.mp4": {
     "width": 1920,
     "height": 1080
-  },
-  "/media/dji-romo/03.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-romo/04.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-romo/05.jpg": {
-    "width": 2160,
-    "height": 2700
   },
   "/media/dji-romo/06.mp4": {
     "width": 2160,
@@ -276,8 +12,8 @@
     "height": 2700
   },
   "/media/dji-romo/08.mp4": {
-    "width": 3978,
-    "height": 2238
+    "width": 3840,
+    "height": 2160
   },
   "/media/dji-romo/09.mp4": {
     "width": 2880,
@@ -302,14 +38,6 @@
   "/media/dji-romo/14.mp4": {
     "width": 2880,
     "height": 1620
-  },
-  "/media/dji-romo/15.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-romo/16.jpg": {
-    "width": 2160,
-    "height": 2700
   },
   "/media/dji-romo/17.mp4": {
     "width": 2880,
@@ -339,61 +67,101 @@
     "width": 2160,
     "height": 1326
   },
-  "/media/dji-romo/24.jpg": {
-    "width": 2160,
-    "height": 1327
-  },
-  "/media/dji-romo/25.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
-  "/media/dji-romo/26.jpg": {
-    "width": 3840,
-    "height": 2161
-  },
-  "/media/dji-romo/27.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
   "/media/dji-romo/28.mp4": {
     "width": 2160,
     "height": 1214
-  },
-  "/media/dji-romo/29.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-romo/30.jpg": {
-    "width": 2160,
-    "height": 2700
   },
   "/media/dji-romo/31.mp4": {
     "width": 2160,
     "height": 2700
   },
-  "/media/dji-fly/01.jpg": {
+  "/media/dji-avinox/02.mp4": {
+    "width": 2560,
+    "height": 1440
+  },
+  "/media/dji-avinox/04.mp4": {
+    "width": 2048,
+    "height": 2560
+  },
+  "/media/dji-avinox/09.mp4": {
+    "width": 2560,
+    "height": 1440
+  },
+  "/media/dji-avinox/10.mp4": {
+    "width": 2048,
+    "height": 2560
+  },
+  "/media/dji-avinox/11.mp4": {
+    "width": 2048,
+    "height": 2560
+  },
+  "/media/dji-avinox/12.mp4": {
+    "width": 2560,
+    "height": 1440
+  },
+  "/media/dji-avinox/13.mp4": {
+    "width": 2048,
+    "height": 2560
+  },
+  "/media/dji-avinox/14.mp4": {
+    "width": 2048,
+    "height": 2560
+  },
+  "/media/dji-avinox/15.mp4": {
+    "width": 2560,
+    "height": 1440
+  },
+  "/media/dji-avinox/16.mp4": {
+    "width": 2560,
+    "height": 1440
+  },
+  "/media/dji-avinox/17.mp4": {
+    "width": 2560,
+    "height": 1572
+  },
+  "/media/dji-avinox/18.mp4": {
+    "width": 2560,
+    "height": 1572
+  },
+  "/media/dji-avinox/19.mp4": {
+    "width": 2048,
+    "height": 2560
+  },
+  "/media/dji-avinox/22.mp4": {
+    "width": 2048,
+    "height": 2560
+  },
+  "/media/dji-avinox/23.mp4": {
+    "width": 2560,
+    "height": 1440
+  },
+  "/media/dji-avinox/24.mp4": {
+    "width": 2048,
+    "height": 2560
+  },
+  "/media/dji-avinox/25.mp4": {
+    "width": 2048,
+    "height": 2560
+  },
+  "/media/dji-avinox/29.mp4": {
+    "width": 2560,
+    "height": 1440
+  },
+  "/media/dji-avinox/31.mp4": {
+    "width": 2560,
+    "height": 1438
+  },
+  "/media/dji-power/03.mp4": {
     "width": 3840,
     "height": 2160
   },
-  "/media/dji-fly/02.jpg": {
-    "width": 2161,
+  "/media/dji-power/14.mp4": {
+    "width": 2160,
     "height": 2700
   },
-  "/media/dji-fly/03.jpg": {
-    "width": 2161,
+  "/media/dji-power/16.mp4": {
+    "width": 2160,
     "height": 2700
-  },
-  "/media/dji-fly/04.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-fly/05.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-fly/06.jpg": {
-    "width": 3840,
-    "height": 2160
   },
   "/media/dji-fly/07.mp4": {
     "width": 3840,
@@ -431,40 +199,20 @@
     "width": 3840,
     "height": 2160
   },
-  "/media/dji-fly/16.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-fly/17.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-fly/18.jpg": {
-    "width": 2160,
-    "height": 2700
-  },
   "/media/dji-fly/19.mp4": {
     "width": 2160,
     "height": 2700
   },
-  "/media/dji-fly/20.jpg": {
+  "/media/dji-aura/01.mp4": {
     "width": 3840,
     "height": 2160
   },
-  "/media/dji-fly/21.jpg": {
+  "/media/dji-aura/04.mp4": {
     "width": 3840,
     "height": 2160
   },
-  "/media/dji-fly/22.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-fly/23.jpg": {
-    "width": 3840,
-    "height": 2160
-  },
-  "/media/dji-fly/24.jpg": {
-    "width": 3840,
-    "height": 2160
+  "/media/dji-aura/08.mp4": {
+    "width": 2160,
+    "height": 2700
   }
 }

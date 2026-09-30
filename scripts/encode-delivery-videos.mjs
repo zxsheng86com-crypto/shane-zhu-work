@@ -3,9 +3,9 @@ import { dirname, join } from 'node:path';
 import { spawn } from 'node:child_process';
 
 /**
- * Delivery encodes (quality-first, layout-based):
- *   Web:    long-edge ≤2560, 30fps, H.264 CRF 18
- *   Mobile: long-edge ≤1280, 30fps, H.264 CRF 20
+ * Delivery encodes (Safari-safe web):
+ *   Web:    long-edge ≤2560, keep source fps (capped 60), H.264 High + faststart
+ *   Mobile: long-edge ≤1280, H.264 High + faststart
  *
  * Masters stay in media-masters/ and are used as encode source (no generational loss).
  * Usage:
@@ -66,12 +66,13 @@ async function encodeWeb(item) {
     '-y', '-hide_banner', '-loglevel', 'error',
     '-i', item.masterPath,
     '-an',
-    '-vf', 'scale=2560:2560:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=30',
+    '-vf', 'scale=2560:2560:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2',
     '-c:v', 'libx264',
     '-preset', 'slow',
     '-crf', '18',
+    '-profile:v', 'high',
+    '-level', '4.2',
     '-pix_fmt', 'yuv420p',
-    '-x264-params', 'aq-mode=3:aq-strength=0.8:ref=4',
     '-movflags', '+faststart',
     partial,
   ]);
