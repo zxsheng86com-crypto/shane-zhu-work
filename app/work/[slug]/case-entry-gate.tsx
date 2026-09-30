@@ -1,7 +1,8 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { loadCaseEntryPack, warmCaseLookahead } from '../../project-opening';
+import { beginCaseEntry } from '../../case-entry-progress';
+import { caseEntryUnitIds, loadCaseEntryPack, warmCaseLookahead } from '../../project-opening';
 
 const CaseEntryContext = createContext(true);
 
@@ -10,20 +11,29 @@ export function useCaseEntryReady() {
   return useContext(CaseEntryContext);
 }
 
-const ENTRY_TIMEOUT_MS = 12000;
+const ENTRY_TIMEOUT_MS = 45000;
 
 /**
  * Black progress gate on case entry.
- * Finishes slots 01–06 with real progress, then releases the page and
- * immediately warms 07–08 while the visitor is still on the first frames.
+ * Finishes slots 01–06 with real decode progress (images here, videos in
+ * ViewportVideo — Safari needs a real media element), then warms 07–08.
  */
 export function CaseEntryGate({ slug, children }: { slug: string; children: ReactNode }) {
   const [progress, setProgress] = useState(0);
   const [ready, setReady] = useState(false);
 
+  // Start the progress bus during render so child players can report
+  // before this component's useEffect runs.
+  useState(() => {
+    if (typeof window === 'undefined') return false;
+    beginCaseEntry(slug, caseEntryUnitIds(slug));
+    return true;
+  });
+
   useEffect(() => {
     let cancelled = false;
     let finishTimer = 0;
+    const dispose = beginCaseEntry(slug, caseEntryUnitIds(slug));
 
     const finish = () => {
       if (cancelled) return;
@@ -31,7 +41,6 @@ export function CaseEntryGate({ slug, children }: { slug: string; children: Reac
       finishTimer = window.setTimeout(() => {
         if (!cancelled) {
           setReady(true);
-          // While viewing the top: prefetch the next two slots into HTTP cache.
           void warmCaseLookahead(slug);
         }
       }, 180);
@@ -49,6 +58,7 @@ export function CaseEntryGate({ slug, children }: { slug: string; children: Reac
       cancelled = true;
       window.clearTimeout(safety);
       window.clearTimeout(finishTimer);
+      dispose();
     };
   }, [slug]);
 

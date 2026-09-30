@@ -11,7 +11,7 @@ import type { CSSProperties } from 'react';
 import mediaDimensions from '../../media-dimensions.json';
 import { Localized } from '../../localized';
 import { CaseProjectPrefetch } from '../../project-prefetch';
-import { shouldEagerBindCaseSlot, shouldPriorityCaseSlot } from '../../project-opening';
+import { shouldEagerBindCaseSlot, shouldPriorityCaseSlot, isCaseEntrySlot } from '../../project-opening';
 import { CaseEntryGate } from './case-entry-gate';
 
 export function generateStaticParams() {
@@ -86,7 +86,17 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
   const lqip = media && !media.videos.has(slot) ? lqipFor(media.folder, slot) : undefined;
   return <figure className={`placeholder ${tone}${src ? ' has-media' : ''}${src === '/media/dji-romo/10.mp4' ? ' trim-edge' : ''}`} style={size ? { '--media-ratio': `${size.width} / ${size.height}` } as CSSProperties : undefined} data-slot={pad2(slot)}>
     {mediaSrc && (media?.videos.has(slot)
-      ? <ViewportVideo key={`${projectSlug}-${pad2(slot)}-video`} src={mediaSrc} width={size?.width} height={size?.height} mobile={useMobile} poster={poster} eager={shouldEagerBindCaseSlot(slot)} />
+      ? <ViewportVideo
+          key={`${projectSlug}-${pad2(slot)}-video`}
+          src={mediaSrc}
+          width={size?.width}
+          height={size?.height}
+          mobile={useMobile}
+          poster={poster}
+          eager={shouldEagerBindCaseSlot(slot)}
+          entrySlug={isCaseEntrySlot(slot) ? projectSlug : undefined}
+          entrySlot={isCaseEntrySlot(slot) ? slot : undefined}
+        />
       : <CaseStill key={`${projectSlug}-${pad2(slot)}-still`} src={mediaSrc} lqip={lqip} priority={shouldPriorityCaseSlot(slot)} />)}
     {showSlotNumber && <strong className="slot-number">{String(number).padStart(2, '0')}</strong>}
   </figure>;
@@ -107,7 +117,7 @@ export default async function Project({ params }: { params: Promise<{ slug: stri
   return <>
     <Header />
     <CaseProjectPrefetch slug={slug} />
-    <CaseEntryGate slug={slug}>
+    <CaseEntryGate key={slug} slug={slug}>
     <main className="case-study" data-case-entry="">
       <header className="case-hero">
         <div><p><Localized en={project.titleEn ?? project.title} zh={project.title} /></p><h1><Localized en={project.textEn} zh={project.text} /></h1></div>

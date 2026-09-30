@@ -292,36 +292,6 @@ function entryVideoUrl(desktopUrl: string) {
   return desktopUrl.replace(path, mobilePath);
 }
 
-async function fetchWithProgress(url: string, onShare: (ratio: number) => void) {
-  try {
-    const response = await fetch(url, { credentials: 'same-origin', cache: 'force-cache' });
-    if (!response.ok) {
-      onShare(1);
-      return;
-    }
-    const total = Number(response.headers.get('content-length') || 0);
-    const reader = response.body?.getReader();
-    if (!reader) {
-      await response.arrayBuffer();
-      onShare(1);
-      return;
-    }
-    let received = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) {
-        received += value.byteLength;
-        onShare(total > 0 ? Math.min(1, received / total) : Math.min(0.95, received / (2.5e6)));
-      }
-    }
-    onShare(1);
-    warmed.add(mediaKey(url));
-  } catch {
-    onShare(1);
-  }
-}
-
 function loadImageProgress(url: string, onShare: (ratio: number) => void) {
   return new Promise<void>((resolve) => {
     const image = new Image();
@@ -339,59 +309,70 @@ function loadImageProgress(url: string, onShare: (ratio: number) => void) {
   });
 }
 
-type ProgressUnit = { kind: 'image' | 'video'; url: string };
+type ProgressUnit = { kind: 'image' | 'video' | 'poster'; url: string; slot: number };
 
 function entryUnits(slug: ProjectSlug): ProgressUnit[] {
   const items = caseMediaRange(slug, 1, CASE_ENTRY_SLOTS);
   const units: ProgressUnit[] = [];
   for (const item of items) {
     if (item.kind === 'video') {
-      if (item.poster) units.push({ kind: 'image', url: item.poster });
-      units.push({ kind: 'video', url: entryVideoUrl(item.url) });
+      if (item.poster) {
+        units.push({ kind: 'poster', url: item.poster, slot: item.slot });
+      }
+      units.push({ kind: 'video', url: entryVideoUrl(item.url), slot: item.slot });
     } else {
-      units.push({ kind: 'image', url: item.url });
+      units.push({ kind: 'image', url: item.url, slot: item.slot });
     }
   }
   return units;
 }
 
+export function caseEntryUnitIds(slug: string) {
+  if (!isProjectSlug(slug)) return [] as string[];
+  return entryUnits(slug).map((unit) => `${slug}:${unit.kind}:${String(unit.slot).padStart(2, '0')}`);
+}
+
 /**
- * Case-entry gate: slots 01–06 (stills + posters + video bytes).
- * Reports 0–100. Safe to call when slug is unknown (resolves immediately at 100).
+ * Case-entry gate: decode stills/posters here; entry videos decode in ViewportVideo
+ * (Safari will not reuse fetch() bytes for <video>).
  */
-export async function loadCaseEntryPack(slug: string, onProgress?: (value: number) => void) {
+export async function loadCaseEntryPack(
+  slug: string,
+  onProgress?: (value: number) => void,
+) {
   if (!isProjectSlug(slug)) {
     onProgress?.(100);
     return;
   }
 
+  const { beginCaseEntry, reportCaseEntryShare, subscribeCaseEntry, waitCaseEntry } =
+    await import('./case-entry-progress');
+
   const units = entryUnits(slug);
-  if (!units.length) {
-    onProgress?.(100);
-    return;
-  }
+  const ids = caseEntryUnitIds(slug);
+  beginCaseEntry(slug, ids);
+  const unsubscribe = subscribeCaseEntry(slug, (value) => {
+    onProgress?.(Math.min(99, value));
+  });
 
-  const shares = new Array(units.length).fill(0);
-  const report = () => {
-    const sum = shares.reduce((a, b) => a + b, 0);
-    onProgress?.(Math.max(0, Math.min(99, Math.round((sum / units.length) * 100))));
-  };
-
-  await Promise.all(
-    units.map((unit, index) => {
-      if (unit.kind === 'video') {
-        return fetchWithProgress(unit.url, (ratio) => {
-          shares[index] = ratio;
-          report();
+  try {
+    const imageUnits = units.filter((unit) => unit.kind !== 'video');
+    await Promise.all(
+      imageUnits.map(async (unit) => {
+        const id = `${slug}:${unit.kind}:${String(unit.slot).padStart(2, '0')}`;
+        await loadImageProgress(unit.url, (ratio) => {
+          reportCaseEntryShare(slug, id, ratio);
         });
-      }
-      return loadImageProgress(unit.url, (ratio) => {
-        shares[index] = ratio;
-        report();
-      });
-    }),
-  );
-  onProgress?.(100);
+      }),
+    );
+
+    // Videos are reported by eager ViewportVideo binds. Wait until they hit 1
+    // (or safety timeout — large first clips on Safari need headroom).
+    await waitCaseEntry(slug, 45000);
+    onProgress?.(100);
+  } finally {
+    unsubscribe();
+  }
 }
 
 /**
@@ -427,9 +408,14 @@ export function warmCaseLookahead(slug: string) {
   return task;
 }
 
-/** Slots that bind as soon as the entry gate opens (07–08 lookahead). */
+/** Slots that bind during/after entry (01–08). Videos in 01–06 report into the gate. */
 export function shouldEagerBindCaseSlot(slot: number) {
-  return slot > CASE_ENTRY_SLOTS && slot <= CASE_ENTRY_SLOTS + CASE_LOOKAHEAD_SLOTS;
+  return slot >= 1 && slot <= CASE_ENTRY_SLOTS + CASE_LOOKAHEAD_SLOTS;
+}
+
+/** True for the entry gate window (01–06) — must decode before the black bar lifts. */
+export function isCaseEntrySlot(slot: number) {
+  return slot >= 1 && slot <= CASE_ENTRY_SLOTS;
 }
 
 /** Stills in the entry + lookahead window should decode eagerly. */

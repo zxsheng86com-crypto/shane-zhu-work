@@ -1,6 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import {
+  enqueueCaseVideoBind,
+  entryUnitId,
+  reportCaseEntryShare,
+} from '../../case-entry-progress';
 import { useCaseEntryReady } from './case-entry-gate';
 
 export const videoLoopDelays: Record<string, number> = {
@@ -10,10 +15,8 @@ export const videoLoopDelays: Record<string, number> = {
 /**
  * Case video — load once, keep forever on this page.
  *
- * Once a slot has bound its src, we never clear it while the case page is open.
- * Off-screen = pause + freeze current frame.
- * On-screen = resume play.
- * That avoids reload/scramble bugs from detach → reattach.
+ * Entry slots (01–06) bind during the black gate via real <video> decode
+ * (Safari cannot reuse fetch() for media). Off-screen = pause only.
  */
 
 function isNarrowViewport() {
@@ -52,6 +55,30 @@ function isBoundTo(video: HTMLVideoElement, wantUrl: string) {
   return curPath === wantPath || curPath.endsWith(wantPath);
 }
 
+/** Safari often needs a tiny seek before the first frame is paintable. */
+function nudgeFirstFrame(video: HTMLVideoElement) {
+  try {
+    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+    if (!video.paused) return;
+    const from = video.currentTime;
+    const probe = from > 0.05 ? from : Math.min(0.08, Math.max(0.001, (video.duration || 1) * 0.001));
+    video.currentTime = probe;
+    if (from === 0) {
+      const restore = () => {
+        try {
+          if (video.currentTime !== 0) video.currentTime = 0;
+        } catch {
+          /* ignore */
+        }
+        video.removeEventListener('seeked', restore);
+      };
+      video.addEventListener('seeked', restore);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 export function ViewportVideo({
   src,
   width,
@@ -59,19 +86,29 @@ export function ViewportVideo({
   mobile = false,
   poster,
   eager = false,
+  entrySlug,
+  entrySlot,
 }: {
   src: string;
   width?: number;
   height?: number;
   mobile?: boolean;
   poster?: string;
-  /** Bind as soon as the entry gate opens (slots 01–08), keep forever. */
+  /** Bind early (slots 01–08). */
   eager?: boolean;
+  /** When set with entrySlot ≤ 6, this player feeds the entry progress gate. */
+  entrySlug?: string;
+  entrySlot?: number;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const loopDelayMs = Math.max(0, videoLoopDelays[stripQuery(src)] ?? 0);
   const entryReady = useCaseEntryReady();
   const mobileSrc = withQuery(src.replace(/\/([^/?]+)(\?.*)?$/, '/mobile/$1'), src);
+  const feedsEntry =
+    Boolean(entrySlug)
+    && typeof entrySlot === 'number'
+    && entrySlot >= 1
+    && entrySlot <= 6;
 
   const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, mobile));
   const [ready, setReady] = useState(false);
@@ -92,7 +129,9 @@ export function ViewportVideo({
 
   useEffect(() => {
     const video = ref.current;
-    if (!entryReady || !video || typeof IntersectionObserver === 'undefined') return;
+    // Entry/eager slots bind even while the gate is up; others wait for entryReady.
+    if (!video || typeof IntersectionObserver === 'undefined') return;
+    if (!entryReady && !eager && !feedsEntry) return;
 
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -111,8 +150,18 @@ export function ViewportVideo({
     let bound = false;
     let frameCallbackId: number | undefined;
     let replayTimer: ReturnType<typeof setTimeout> | undefined;
+    let revealFallback: ReturnType<typeof setTimeout> | undefined;
+    const entryId =
+      feedsEntry && entrySlug && entrySlot
+        ? entryUnitId(entrySlug, entrySlot, 'video')
+        : null;
 
     const hide = () => setReady(false);
+
+    const reportEntry = (ratio: number) => {
+      if (!entrySlug || !entryId) return;
+      reportCaseEntryShare(entrySlug, entryId, ratio);
+    };
 
     const revealIfValid = () => {
       if (cancelled) return;
@@ -120,6 +169,7 @@ export function ViewportVideo({
       if (!isBoundTo(video, want)) return;
       if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
       if (video.videoWidth < 2 || video.videoHeight < 2) return;
+      reportEntry(1);
       setReady(true);
     };
 
@@ -127,6 +177,8 @@ export function ViewportVideo({
       if (cancelled) return;
       if (!isBoundTo(video, wantRef.current)) return;
       if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+
+      nudgeFirstFrame(video);
 
       const rvfc = video as HTMLVideoElement & {
         requestVideoFrameCallback?: (cb: () => void) => number;
@@ -140,6 +192,9 @@ export function ViewportVideo({
           frameCallbackId = undefined;
           revealIfValid();
         });
+        // Safari may never fire RVFC while paused — don't hang the gray mask.
+        if (revealFallback) clearTimeout(revealFallback);
+        revealFallback = setTimeout(revealIfValid, 120);
         return;
       }
       requestAnimationFrame(() => requestAnimationFrame(revealIfValid));
@@ -150,7 +205,6 @@ export function ViewportVideo({
       if (!video.paused) video.pause();
     };
 
-    /** Bind src once for this page lifetime. Never clear while mounted. */
     const ensureBound = () => {
       const want = wantRef.current;
       if (bound && isBoundTo(video, want)) return;
@@ -168,7 +222,7 @@ export function ViewportVideo({
     };
 
     const play = () => {
-      if (!inView || waitingLoop || reducedMotion.matches || document.hidden) {
+      if (!entryReady || !inView || waitingLoop || reducedMotion.matches || document.hidden) {
         video.autoplay = false;
         return;
       }
@@ -181,7 +235,6 @@ export function ViewportVideo({
       }
     };
 
-    // Warm poster + bind early when approaching, so scroll-back is instant.
     const nearIo = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return;
       if (poster) {
@@ -199,13 +252,27 @@ export function ViewportVideo({
     const viewIo = new IntersectionObserver(([entry]) => {
       inView = entry.isIntersecting;
       if (inView) play();
-      else freeze(); // keep src + current frame — do not unload
+      else freeze();
     }, {
       rootMargin: isNarrowViewport() ? '40px 0px' : '80px 0px',
       threshold: 0.05,
     });
 
-    const onLoaded = () => armReveal();
+    const onProgress = () => {
+      if (!entryId || !isBoundTo(video, wantRef.current)) return;
+      try {
+        if (video.buffered.length > 0 && video.duration > 0) {
+          reportEntry(Math.min(0.99, video.buffered.end(video.buffered.length - 1) / video.duration));
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const onLoaded = () => {
+      onProgress();
+      armReveal();
+    };
     const onPlaying = () => armReveal();
 
     const onEnded = () => {
@@ -228,7 +295,10 @@ export function ViewportVideo({
         bound = false;
         hide();
         setActiveSrc(src);
+        return;
       }
+      // Don't block the entry gate forever on a dead file.
+      reportEntry(1);
     };
 
     const onVisibility = () => {
@@ -241,26 +311,47 @@ export function ViewportVideo({
     viewIo.observe(video);
     video.addEventListener('loadeddata', onLoaded);
     video.addEventListener('canplay', onLoaded);
+    video.addEventListener('progress', onProgress);
     video.addEventListener('playing', onPlaying);
     video.addEventListener('ended', onEnded);
     video.addEventListener('error', onError);
     document.addEventListener('visibilitychange', onVisibility);
     reducedMotion.addEventListener('change', onVisibility);
 
-    // Slots 01–08: bind immediately after the gate so 07/08 are ready
-    // while the visitor is still on the first frames. Never unload after.
-    if (eager) {
+    const shouldBindNow = eager || feedsEntry;
+    if (shouldBindNow) {
       if (poster) {
         const img = new window.Image();
         img.decoding = 'async';
         img.src = poster;
       }
-      ensureBound();
+      void enqueueCaseVideoBind(async () => {
+        if (cancelled) return;
+        ensureBound();
+        // Give this clip time to reach a frame before the next eager bind.
+        await new Promise<void>((resolve) => {
+          if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 1) {
+            reportEntry(1);
+            resolve();
+            return;
+          }
+          const done = () => {
+            video.removeEventListener('loadeddata', done);
+            video.removeEventListener('error', done);
+            window.clearTimeout(timer);
+            resolve();
+          };
+          const timer = window.setTimeout(done, 12000);
+          video.addEventListener('loadeddata', done);
+          video.addEventListener('error', done);
+        });
+      });
     }
 
     return () => {
       cancelled = true;
       if (replayTimer) clearTimeout(replayTimer);
+      if (revealFallback) clearTimeout(revealFallback);
       const rvfc = video as HTMLVideoElement & { cancelVideoFrameCallback?: (id: number) => void };
       if (frameCallbackId !== undefined && typeof rvfc.cancelVideoFrameCallback === 'function') {
         rvfc.cancelVideoFrameCallback(frameCallbackId);
@@ -269,6 +360,7 @@ export function ViewportVideo({
       viewIo.disconnect();
       video.removeEventListener('loadeddata', onLoaded);
       video.removeEventListener('canplay', onLoaded);
+      video.removeEventListener('progress', onProgress);
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('ended', onEnded);
       video.removeEventListener('error', onError);
@@ -276,7 +368,7 @@ export function ViewportVideo({
       reducedMotion.removeEventListener('change', onVisibility);
       freeze();
     };
-  }, [activeSrc, src, mobile, loopDelayMs, poster, entryReady, eager]);
+  }, [activeSrc, src, mobile, loopDelayMs, poster, entryReady, eager, feedsEntry, entrySlug, entrySlot]);
 
   return (
     <span className={`case-video${ready ? ' is-ready' : ''}${poster ? ' has-poster' : ''}`}>
