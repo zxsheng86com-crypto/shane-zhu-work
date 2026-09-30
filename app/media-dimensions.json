@@ -214,5 +214,529 @@
   "/media/dji-aura/08.mp4": {
     "width": 2160,
     "height": 2700
+  },
+  "/media/dji-romo/29.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-romo/15.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-romo/01.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-romo/03.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-romo/16.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-romo/05.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-romo/04.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-romo/27.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-romo/26.jpg": {
+    "width": 3840,
+    "height": 2161
+  },
+  "/media/dji-romo/24.jpg": {
+    "width": 2160,
+    "height": 1327
+  },
+  "/media/dji-romo/30.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-romo/cover.jpg": {
+    "width": 3840,
+    "height": 1820
+  },
+  "/media/dji-romo/25.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-romo/mobile/29.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-romo/mobile/15.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-romo/mobile/01.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-romo/mobile/03.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-romo/mobile/16.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-romo/mobile/05.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-romo/mobile/04.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-romo/mobile/27.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-romo/mobile/26.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-romo/mobile/24.jpg": {
+    "width": 1280,
+    "height": 786
+  },
+  "/media/dji-romo/mobile/30.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-romo/mobile/25.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-power/15.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-power/01.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-power/17.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-power/02.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-power/12.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-power/06.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-power/07.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-power/13.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-power/05.jpg": {
+    "width": 2161,
+    "height": 2700
+  },
+  "/media/dji-power/11.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-power/10.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-power/04.jpg": {
+    "width": 2161,
+    "height": 2700
+  },
+  "/media/dji-power/09.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-power/08.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-power/18.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-power/cover.jpg": {
+    "width": 3840,
+    "height": 1820
+  },
+  "/media/dji-power/mobile/15.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-power/mobile/01.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-power/mobile/17.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-power/mobile/02.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-power/mobile/12.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-power/mobile/06.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-power/mobile/07.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-power/mobile/13.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-power/mobile/05.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-power/mobile/11.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-power/mobile/10.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-power/mobile/04.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-power/mobile/09.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-power/mobile/08.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-power/mobile/18.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-avinox/28.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-avinox/01.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-avinox/03.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-avinox/06.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-avinox/07.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-avinox/05.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-avinox/21.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-avinox/08.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-avinox/20.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-avinox/27.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-avinox/26.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-avinox/32.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-avinox/30.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-avinox/cover.jpg": {
+    "width": 3840,
+    "height": 1820
+  },
+  "/media/dji-avinox/mobile/28.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-avinox/mobile/01.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-avinox/mobile/03.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-avinox/mobile/06.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-avinox/mobile/07.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-avinox/mobile/05.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-avinox/mobile/21.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-avinox/mobile/08.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-avinox/mobile/20.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-avinox/mobile/27.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-avinox/mobile/26.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-avinox/mobile/32.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-avinox/mobile/30.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-aura/03.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-aura/02.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-aura/12.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-aura/06.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-aura/07.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-aura/05.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-aura/11.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-aura/10.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-aura/09.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-aura/cover.jpg": {
+    "width": 3840,
+    "height": 1820
+  },
+  "/media/dji-aura/mobile/03.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-aura/mobile/02.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-aura/mobile/12.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-aura/mobile/06.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-aura/mobile/07.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-aura/mobile/05.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-aura/mobile/11.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-aura/mobile/10.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-aura/mobile/09.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-fly/01.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-fly/17.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-fly/03.jpg": {
+    "width": 2161,
+    "height": 2700
+  },
+  "/media/dji-fly/02.jpg": {
+    "width": 2161,
+    "height": 2700
+  },
+  "/media/dji-fly/16.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-fly/06.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-fly/05.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-fly/04.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-fly/21.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-fly/20.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-fly/22.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-fly/23.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-fly/18.jpg": {
+    "width": 2160,
+    "height": 2700
+  },
+  "/media/dji-fly/24.jpg": {
+    "width": 3840,
+    "height": 2160
+  },
+  "/media/dji-fly/cover.jpg": {
+    "width": 3840,
+    "height": 1820
+  },
+  "/media/dji-fly/mobile/01.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-fly/mobile/17.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-fly/mobile/03.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-fly/mobile/02.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-fly/mobile/16.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-fly/mobile/06.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-fly/mobile/05.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-fly/mobile/04.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-fly/mobile/21.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-fly/mobile/20.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-fly/mobile/22.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-fly/mobile/23.jpg": {
+    "width": 1280,
+    "height": 720
+  },
+  "/media/dji-fly/mobile/18.jpg": {
+    "width": 1024,
+    "height": 1280
+  },
+  "/media/dji-fly/mobile/24.jpg": {
+    "width": 1280,
+    "height": 720
   }
 }

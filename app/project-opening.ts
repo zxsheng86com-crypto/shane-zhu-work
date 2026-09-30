@@ -40,7 +40,7 @@ const catalogs: Record<ProjectSlug, CaseCatalog> = {
     href: '/work/common-ground',
     folder: 'dji-romo',
     videoSlots: new Set([2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 28, 31]),
-    version: '20260930-jpg',
+    version: '20260930-still2',
     maxSlot: 31,
   },
   'dji-avinox': {
@@ -48,7 +48,7 @@ const catalogs: Record<ProjectSlug, CaseCatalog> = {
     href: '/work/dji-avinox',
     folder: 'dji-avinox',
     videoSlots: new Set([2, 4, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 22, 23, 24, 25, 29, 31]),
-    version: '20260930-safari1',
+    version: '20260930-still2',
     maxSlot: 32,
   },
   'dji-power': {
@@ -56,7 +56,7 @@ const catalogs: Record<ProjectSlug, CaseCatalog> = {
     href: '/work/dji-power',
     folder: 'dji-power',
     videoSlots: new Set([3, 14, 16]),
-    version: '20260930-jpg',
+    version: '20260930-still2',
     maxSlot: 18,
   },
   'dji-fly': {
@@ -64,7 +64,7 @@ const catalogs: Record<ProjectSlug, CaseCatalog> = {
     href: '/work/dji-fly',
     folder: 'dji-fly',
     videoSlots: new Set([7, 8, 9, 10, 11, 12, 13, 14, 15, 19]),
-    version: '20260930-jpg',
+    version: '20260930-still2',
     maxSlot: 24,
   },
   'dji-aura-logo': {
@@ -72,7 +72,7 @@ const catalogs: Record<ProjectSlug, CaseCatalog> = {
     href: '/work/dji-aura-logo',
     folder: 'dji-aura',
     videoSlots: new Set([1, 4, 8]),
-    version: '20260930-jpg',
+    version: '20260930-still2',
     maxSlot: 12,
   },
 };

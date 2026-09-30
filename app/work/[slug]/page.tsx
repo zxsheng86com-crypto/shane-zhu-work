@@ -83,15 +83,15 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
   const src = media?.slots.has(slot) ? `/media/${media.folder}/${pad2(slot)}.${media.videos.has(slot) ? 'mp4' : 'jpg'}` : undefined;
   const size = src ? (mediaDimensions as Record<string, { width: number; height: number }>)[src] : undefined;
   const mediaSrc = src === '/media/dji-aura/06.jpg'
-    ? `${src}?v=20260930-jpg`
+    ? `${src}?v=20260930-still2`
     : src && projectSlug === 'dji-power'
-    ? `${src}?v=20260930-jpg`
+    ? `${src}?v=20260930-still2`
     : src && projectSlug === 'dji-aura-logo'
-      ? `${src}?v=20260930-jpg`
+      ? `${src}?v=20260930-still2`
     : src && projectSlug === 'dji-fly'
-      ? `${src}?v=20260930-jpg`
-    : src && projectSlug === 'common-ground' ? `${src}?v=20260930-jpg`
-      : src && projectSlug === 'dji-avinox' ? `${src}?v=20260930-safari1` : src;
+      ? `${src}?v=20260930-still2`
+    : src && projectSlug === 'common-ground' ? `${src}?v=20260930-still2`
+      : src && projectSlug === 'dji-avinox' ? `${src}?v=20260930-still2` : src;
   const useMobile = Boolean(media && media.videos.has(slot) && hasMobileVideo(media.folder, slot));
   const poster = media && media.videos.has(slot) ? posterFor(media.folder, slot) : undefined;
   const lqip = media && !media.videos.has(slot) ? lqipFor(media.folder, slot) : undefined;
