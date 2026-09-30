@@ -13,6 +13,7 @@ function localDevOrigins() {
 }
 
 const nextConfig: NextConfig = {
+  output: 'export',
   // Next 16 blocks cross-origin /_next/* from phone LAN IPs unless allowlisted.
   allowedDevOrigins: localDevOrigins(),
   images: {
