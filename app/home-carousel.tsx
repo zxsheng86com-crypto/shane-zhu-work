@@ -7,10 +7,10 @@ import { HomeParticleField } from './home-particle-field';
 import { Localized } from './localized';
 import { requestShaneGridSync, startShaneGrid } from './shane-grid';
 import { SiteCloseFooter } from './site-close-footer';
-import { projects } from './site';
+import { ProjectGrid, projects } from './site';
 import { HomeProjectPrefetch } from './project-prefetch';
 
-const featured = projects.filter((project) => project.slug !== 'confidential-project').slice(0, 5);
+const featured = projects.slice(0, 5);
 const coverFor = (project: (typeof featured)[number]) => project.workCover || project.cover || '';
 
 export function HomeCarousel() {
@@ -21,11 +21,14 @@ export function HomeCarousel() {
   const lottieRef = useRef<HTMLDivElement>(null);
   const [statementVisible, setStatementVisible] = useState(false);
   const [lottieReady, setLottieReady] = useState(false);
+  const [fontFallback, setFontFallback] = useState(false);
   const [introPhase, setIntroPhase] = useState<'loading' | 'wordmark' | 'particles' | 'complete'>('loading');
   const [sceneEnabled, setSceneEnabled] = useState(false);
   const [particlesReady, setParticlesReady] = useState(false);
   // Only after mount: hide nav during intro. Without JS, nav stays visible.
   const [introGate, setIntroGate] = useState(false);
+  // ponytail: mount only one cover tree so phones don't download desktop 4MB covers too
+  const [coverMode, setCoverMode] = useState<'unknown' | 'desktop' | 'mobile'>('unknown');
   const introPhaseRef = useRef(introPhase);
   const lottieArmed = introPhase !== 'loading';
 
@@ -35,6 +38,14 @@ export function HomeCarousel() {
 
   useEffect(() => {
     setIntroGate(true);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 800px)');
+    const sync = () => setCoverMode(mq.matches ? 'mobile' : 'desktop');
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
   }, []);
 
   /* ---- intro phases ----
@@ -79,9 +90,9 @@ export function HomeCarousel() {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reducedMotion) {
       setLottieReady(false);
+      setFontFallback(true);
       const timer = window.setTimeout(() => {
         setSceneEnabled(true);
-        // Keep a beat on wordmark so CSS text fallback can paint, then particles.
         setIntroPhase('wordmark');
         window.setTimeout(() => setIntroPhase('particles'), 80);
       }, 100);
@@ -259,12 +270,14 @@ export function HomeCarousel() {
           if (destroyed) return;
           introExpired = true;
           setLottieReady(false);
+          setFontFallback(true);
           fallbackTimer = window.setTimeout(revealParticles, 400);
         });
         fallbackTimer = window.setTimeout(() => {
-          if (!destroyed && introPhaseRef.current === 'wordmark') {
+          if (!destroyed && introPhaseRef.current === 'wordmark' && !entranceReady) {
             introExpired = true;
             setLottieReady(false);
+            setFontFallback(true);
             revealParticles();
           }
         }, 3200);
@@ -323,18 +336,21 @@ export function HomeCarousel() {
         introExpired = true;
         entranceReady = false;
         setLottieReady(false);
+        setFontFallback(true);
         fallbackTimer = window.setTimeout(revealParticles, 1500);
       });
       fallbackTimer = window.setTimeout(() => {
-        if (!destroyed && introPhaseRef.current === 'wordmark') {
+        if (!destroyed && introPhaseRef.current === 'wordmark' && !entranceReady) {
           introExpired = true;
           setLottieReady(false);
+          setFontFallback(true);
           revealParticles();
         }
       }, 4000);
     })().catch(() => {
       if (!destroyed) {
         setLottieReady(false);
+        setFontFallback(true);
         fallbackTimer = window.setTimeout(() => {
           setSceneEnabled(true);
           setIntroPhase('particles');
@@ -362,8 +378,7 @@ export function HomeCarousel() {
 
   /* Desktop only: sticky cover fade scrub. Mobile uses a Fairchild-style tiled stack. */
   useEffect(() => {
-    const mobile = window.matchMedia('(max-width: 800px), (pointer: coarse)');
-    if (mobile.matches) return;
+    if (coverMode !== 'desktop') return;
 
     const update = () => {
       const track = trackRef.current;
@@ -384,7 +399,7 @@ export function HomeCarousel() {
         const number = cover.querySelector<HTMLElement>('.cf-project-index');
         const description = cover.querySelector<HTMLElement>('.cf-project-description');
         const image = cover.querySelector<HTMLImageElement>('img');
-        if (!name || !number || !description || !image) return;
+        if (!name || !number || !description) return;
         cover.style.setProperty('--cover-index', String(index));
         const isCurrent = index === currentIndex;
         const isIncoming = index === currentIndex + 1;
@@ -394,7 +409,7 @@ export function HomeCarousel() {
         cover.style.clipPath = 'none';
         cover.style.filter = 'none';
         cover.style.opacity = isIncoming ? String(reveal(transition, 0.5, 0.9)) : '1';
-        image.style.transform = 'none';
+        if (image) image.style.transform = 'none';
 
         const phase = (index === 0 ? rawProgress : progress) - index;
         const positionPhase = index === 0 ? Math.max(phase, 0) : phase;
@@ -425,7 +440,7 @@ export function HomeCarousel() {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
     };
-  }, []);
+  }, [coverMode]);
 
   useEffect(() => {
     if (introPhase === 'loading') return;
@@ -449,7 +464,7 @@ export function HomeCarousel() {
     <HomeProjectPrefetch enabled={introPhase === 'complete'} />
     <section ref={heroRef} className="cf-hero" aria-label="Shane Zhu">
       {sceneEnabled ? <HomeParticleField onReady={() => setParticlesReady(true)} /> : null}
-      <h1 className={`cf-wordmark${lottieReady ? ' is-lottie-on' : ''}`} aria-label="Shane">
+      <h1 className={`cf-wordmark${lottieReady ? ' is-lottie-on' : ''}${fontFallback ? ' is-font-fallback' : ''}`} aria-label="Shane">
         {'SHANE'.split('').map((character, index) => <span key={`${character}-${index}`} style={{ animationDelay: `${0.3 + index * 0.05}s` }}>{character === ' ' ? '\u00a0' : character}</span>)}
       </h1>
       <div ref={lottieRef} className="cf-wordmark-lottie" aria-hidden="true" />
@@ -479,12 +494,11 @@ export function HomeCarousel() {
       </h2>
     </section>
     <section className="cf-covers" id="work">
-      {/* Desktop: fixed-stage opacity covers (unchanged) */}
+      {coverMode !== 'mobile' ? (
       <div ref={trackRef} className="cf-covers-track cf-covers-desktop" style={{ height: `${featured.length + 1}00vh` }}>
         <div className="cf-covers-sticky">
           {featured.map((project, index) => <Link className="cf-cover" href={`/work/${project.slug}`} key={project.slug} ref={(element) => { coverRefs.current[index] = element; }}>
-            {/* Lazy: hero LCP is galaxy/SHANE; both cover trees stay in DOM so eager would download hidden-branch covers on workplace nets. */}
-            <Image src={coverFor(project)} alt="" fill sizes="100vw" loading="lazy" unoptimized draggable={false} />
+            {coverMode === 'desktop' ? <Image src={coverFor(project)} alt="" fill sizes="100vw" loading="lazy" unoptimized draggable={false} /> : null}
             <span className="cf-project-index">{String(index + 1).padStart(2, '0')}</span>
             <span className="cf-project-name">{String(project.titleEn ?? project.title).split('').map((character, letter) => <span className="cf-name-letter" key={`${character}-${letter}`}>{character === ' ' ? '\u00a0' : character}</span>)}</span>
             <span className="cf-project-description">
@@ -495,31 +509,13 @@ export function HomeCarousel() {
           <svg className="cf-grain" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><filter id="cf-noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" /><feColorMatrix type="saturate" values="0" /></filter><rect width="100%" height="100%" filter="url(#cf-noise)" /></svg>
         </div>
       </div>
+      ) : null}
 
-      {/* Mobile: Fairchild-style vertical tile stack */}
-      <div className="cf-project-stack">
-        <div className="cf-project-stack-head">
-          <span>LATEST PROJECTS</span>
-          <Link href="/work">ALL WORK</Link>
-        </div>
-        {featured.map((project, index) => {
-          const title = project.titleEn ?? project.title;
-          const src = coverFor(project);
-          return <Link className="cf-project-tile" href={`/work/${project.slug}`} key={`tile-${project.slug}`}>
-            <div className="cf-project-tile-media">
-              {src
-                ? <Image src={src} alt="" fill sizes="100vw" loading="lazy" unoptimized draggable={false} />
-                : null}
-            </div>
-            <div className="cf-project-tile-meta">
-              <span className="cf-project-tile-index">{String(index + 1).padStart(2, '0')}</span>
-              <span className="cf-project-tile-title">{title}</span>
-              <span className="cf-project-tile-scope"><Localized en={project.tagEn ?? project.type} zh={project.tag ?? project.type} /></span>
-              <span className="cf-project-tile-arrow" aria-hidden="true">→</span>
-            </div>
-          </Link>;
-        })}
+      {coverMode !== 'desktop' ? (
+      <div className="cf-home-work">
+        {coverMode === 'mobile' ? <ProjectGrid /> : null}
       </div>
+      ) : null}
     </section>
     <SiteCloseFooter />
   </main>;

@@ -1,11 +1,6 @@
 import assert from 'node:assert/strict';
 const imported = await import(process.argv[2] || 'playwright');
 const { chromium, webkit } = imported.default ?? imported;
-const desktopOnlyUpdatedVideos = new Set([
-  'common-ground/14', 'common-ground/18',
-  'dji-avinox/06', 'dji-avinox/09', 'dji-avinox/12', 'dji-avinox/14', 'dji-avinox/16', 'dji-avinox/22',
-  'dji-power/03', 'dji-power/16', 'dji-aura-logo/06',
-]);
 const browser = await (process.argv.includes('--webkit') ? webkit.launch() : chromium.launch({ channel: 'chrome', headless: true }));
 try {
   const projects = [
@@ -17,7 +12,7 @@ try {
   const mobile = !process.argv.includes('--desktop');
   for (const [slug, count] of projects) {
   const page = await browser.newPage({ viewport: { width: mobile ? 390 : 1440, height: 844 }, isMobile: mobile, hasTouch: mobile });
-  const failures = [];
+    const failures = [];
   page.on('response', response => {
     if (response.url().includes('/media/') && response.status() >= 400) failures.push(`${response.status()} ${response.url()}`);
   });
@@ -27,7 +22,6 @@ try {
   for (let index = 0; index < count; index++) {
     const figure = figures.nth(index);
     await figure.scrollIntoViewIfNeeded();
-    const slot = await figure.locator('.slot-number').textContent();
     const media = figure.locator('img,video');
     const state = await media.evaluate(async e => {
       if (e.tagName === 'IMG') {
@@ -45,7 +39,7 @@ try {
     });
     assert(state.width > 0 && state.height > 0);
     if (new URL(state.src).pathname.endsWith('.mp4')) {
-      assert.equal(state.src.includes('/mobile/'), mobile && !desktopOnlyUpdatedVideos.has(`${slug}/${slot}`));
+      assert.equal(state.src.includes('/mobile/'), mobile);
     }
     if (slug === 'dji-aura-logo' && index === 3) {
       const delay = await media.evaluate(e => new Promise((resolve, reject) => {

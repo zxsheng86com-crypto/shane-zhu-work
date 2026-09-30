@@ -24,7 +24,7 @@ function whenIdle(run: () => void, timeout = 1600) {
 function caseSlugFromHref(href: string) {
   const match = href.match(/^\/work\/([^/?#]+)/);
   const slug = match?.[1];
-  if (!slug || slug === 'confidential-project') return undefined;
+  if (!slug) return undefined;
   return slug;
 }
 

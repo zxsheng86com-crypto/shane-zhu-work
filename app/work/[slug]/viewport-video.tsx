@@ -8,8 +8,9 @@ export const videoLoopDelays: Record<string, number> = {
 
 /**
  * Justified-adapted for local large files:
- * - Attach src when near (no global queue — never block the visible one)
- * - Keep src on desktop after attach (pause = freeze frame)
+ * - Attach src when near (no global queue)
+ * - Keep src after attach on mobile AND desktop (pause = freeze frame)
+ * - Never detach on scroll — remounting caused mobile scramble / wrong frames
  * - preload=metadata; play/pause from intersection only
  * - Sharp poster under video until first frame fades in
  */
@@ -96,17 +97,6 @@ export function ViewportVideo({
       video.src = activeSrc;
     };
 
-    const detachMobile = () => {
-      if (!isNarrowViewport()) return;
-      freeze();
-      attached = false;
-      delete video.dataset.src;
-      video.preload = 'none';
-      video.removeAttribute('src');
-      try { video.load(); } catch { /* ignore */ }
-      setReady(false);
-    };
-
     const play = () => {
       if (!inView || waiting || reducedMotion.matches || document.hidden) {
         video.autoplay = false;
@@ -123,9 +113,9 @@ export function ViewportVideo({
 
     const nearIo = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) attach();
-      else detachMobile();
+      // Keep src attached — pause only via viewIo (avoids mobile reload scramble).
     }, {
-      rootMargin: isNarrowViewport() ? '200px 0px' : '480px 0px',
+      rootMargin: isNarrowViewport() ? '240px 0px' : '480px 0px',
       threshold: 0,
     });
 

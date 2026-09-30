@@ -203,7 +203,7 @@ html[data-lang="zh"] .case-text>.case-desc>.lang-zh{display:block!important}
 .media-stack>div{display:grid;grid-template-rows:1fr 1fr;gap:16px;min-height:0}
 .media-stack.reverse>div{grid-column:1}.media-stack.reverse>.placeholder{grid-column:2}
 .finale{aspect-ratio:1.477}
-.next-project{min-height:540px;padding:120px 16px 70px}
+.next-project{min-height:540px;padding:120px var(--sg-gutter-right,29px) 70px var(--sg-gutter-left,29px)}
 .next-project p{margin:0 0 16px;color:var(--muted)}
 .next-project a{display:flex;justify-content:space-between;font-family:inherit;font-size:56px;font-weight:400;line-height:1.2}
 
@@ -390,13 +390,13 @@ body:has(.cf-home){background:#000;color:#fff;color-scheme:dark}
 .cf-home[data-intro-phase='particles'] .cf-hero-particles.is-fallback,
 .cf-home[data-intro-phase='complete'] .cf-hero-particles.is-ready,
 .cf-home[data-intro-phase='complete'] .cf-hero-particles.is-fallback{opacity:1}
-.cf-hero-particles picture,.cf-hero-particles>img{position:absolute;inset:0;display:block;width:100%;height:100%}
-.cf-hero-particles img{width:100%;height:100%;object-fit:cover;opacity:0;transform:translateY(-16%) scale(1.3)}
-.cf-hero-particles.is-fallback img{opacity:1}
+.cf-hero-particles picture,.cf-hero-particles>img{position:absolute;inset:0;display:block;width:100%;height:100%;visibility:hidden;pointer-events:none}
+.cf-hero-particles img{width:100%;height:100%;object-fit:cover;opacity:0!important;transform:translateY(-16%) scale(1.3)}
 .cf-hero-particles canvas{position:absolute;inset:0;display:block;width:100%;height:100%;opacity:0}
 .cf-hero-particles.is-ready canvas{opacity:1}
 .cf-wordmark{position:absolute;z-index:1;right:0;bottom:-9svh;left:0;display:flex;justify-content:center;margin:0;font-size:56vw;font-weight:500;line-height:.8;letter-spacing:-.055em;white-space:nowrap;user-select:none}
-.cf-wordmark.is-lottie-on span{visibility:hidden}
+.cf-wordmark span{display:inline-block;visibility:hidden;opacity:0;transform:translateY(112%)}
+.cf-wordmark.is-font-fallback span{visibility:visible}
 .cf-wordmark-lottie{position:absolute;z-index:1;right:0;bottom:max(0px,calc(34px - 1.9vw));left:0;width:100%;aspect-ratio:3840/940;pointer-events:none;opacity:0;transition:opacity .3s ease}
 .cf-wordmark-lottie>svg{position:absolute;inset:0;width:100%!important;height:100%!important;display:block}
 .cf-entrance{position:absolute;inset:0}
@@ -410,11 +410,9 @@ body:has(.cf-home){background:#000;color:#fff;color-scheme:dark}
 .cf-letters{position:absolute;inset:0;transform-origin:0.95% 100%;transform:scale(1.6676)}
 .cf-letters>svg{position:absolute;inset:0;width:100%!important;height:100%!important;display:block}
 .cf-home[data-intro-phase='wordmark'] .cf-wordmark-lottie,.cf-home[data-intro-phase='particles'] .cf-wordmark-lottie,.cf-home[data-intro-phase='complete'] .cf-wordmark-lottie{opacity:1}
-.cf-wordmark span{display:inline-block;opacity:0;transform:translateY(112%)}
-.cf-home[data-intro-phase='wordmark'] .cf-wordmark:not(.is-lottie-on) span{animation:cf-rise 1.2s cubic-bezier(.19,1,.22,1) forwards}
-/* If Lottie never paints (common on stalled mobile main threads), keep the text wordmark visible. */
-.cf-home[data-intro-phase='particles'] .cf-wordmark:not(.is-lottie-on) span,
-.cf-home[data-intro-phase='complete'] .cf-wordmark:not(.is-lottie-on) span{opacity:1;transform:none}
+.cf-home[data-intro-phase='wordmark'] .cf-wordmark.is-font-fallback:not(.is-lottie-on) span{animation:cf-rise 1.2s cubic-bezier(.19,1,.22,1) forwards}
+.cf-home[data-intro-phase='particles'] .cf-wordmark.is-font-fallback:not(.is-lottie-on) span,
+.cf-home[data-intro-phase='complete'] .cf-wordmark.is-font-fallback:not(.is-lottie-on) span{opacity:1;transform:none}
 @keyframes cf-rise{to{opacity:1;transform:translateY(0)}}
 .cf-intro-loader{position:fixed;z-index:120;inset:0;display:flex;align-items:center;justify-content:center;background:#000;opacity:1;visibility:visible;pointer-events:auto;animation:cf-loader-shell-dismiss .55s ease 1.25s forwards}
 .cf-intro-loader.is-hidden{opacity:0!important;visibility:hidden!important;pointer-events:none!important;animation:none}
@@ -458,8 +456,8 @@ html[data-lang="zh"] .cf-statement h2>.lang-zh{display:block!important}
 .cf-project-description small{display:block;margin-top:clamp(12px,.95vw,22px);color:rgba(247,247,247,.7);font-size:clamp(10px,.8vw,18px);letter-spacing:.4px;text-transform:uppercase}
 .cf-grain{display:none}
 
-/* Mobile Fairchild-style project stack — hidden on desktop */
-.cf-project-stack{display:none}
+/* Mobile home work grid — same cards as /work; hidden on desktop */
+.cf-home-work{display:none}
 
 @media(max-width:760px){
   .cf-edge{width:6px}
@@ -506,76 +504,26 @@ html[data-lang="zh"] .cf-statement h2>.lang-zh{display:block!important}
   .cf-hero-meta{display:none}
   .cf-statement{display:none}
   .cf-covers-desktop{display:none!important}
-  .cf-project-stack{
+  .cf-home-work{
     display:block;
-    padding:8px var(--sg-gutter-right,var(--project-cover-gutter)) 56px var(--sg-gutter-left,var(--project-cover-gutter));
     background:#000;
     color:#f7f7f7;
   }
-  .cf-project-stack-head{
-    display:flex;
-    align-items:baseline;
-    justify-content:space-between;
-    gap:16px;
-    padding:14px 0;
-    border-top:0;
-    border-bottom:1px solid rgba(255,255,255,.14);
-    font-size:11px;
-    font-weight:500;
-    letter-spacing:.08em;
-    text-transform:uppercase;
+  .cf-home-work .project-grid{
+    grid-template-columns:1fr;
+    gap:var(--project-cover-gutter);
+    /* Lottie box + --cf-wordmark-bottom already leave optical slack under SHANE —
+       only keep the same grid gap used between project cards. */
+    margin-top:calc(0px - var(--cf-wordmark-bottom,10px));
+    padding:calc(var(--project-cover-gutter) * 2) var(--sg-gutter-right,var(--project-cover-gutter)) 24px var(--sg-gutter-left,var(--project-cover-gutter));
   }
-  .cf-project-stack-head>span{color:rgba(247,247,247,.45)}
-  .cf-project-stack-head>a{color:#f7f7f7;text-decoration:none}
-  .cf-project-tile{
-    display:block;
-    margin-top:18px;
-    color:inherit;
-    text-decoration:none;
-  }
-  .cf-project-tile-media{
-    position:relative;
-    width:100%;
-    aspect-ratio:16/10;
-    overflow:hidden;
-    background:#121212;
-    border-radius:var(--project-cover-radius);
-  }
-  .cf-project-tile-media>img{
-    object-fit:cover;
-    object-position:center center;
-  }
-  .cf-project-tile-meta{
-    display:grid;
-    grid-template-columns:auto minmax(0,1fr) auto auto;
-    align-items:baseline;
-    column-gap:10px;
-    padding:12px 0 14px;
-    border-bottom:1px solid rgba(255,255,255,.14);
-    font-size:13px;
-    font-weight:500;
-    line-height:1.2;
-    letter-spacing:.01em;
-  }
-  .cf-project-tile-index{color:rgba(247,247,247,.4);font-variant-numeric:tabular-nums}
-  .cf-project-tile-title{
-    min-width:0;
-    overflow:hidden;
-    color:#f7f7f7;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  .cf-project-tile-scope{
-    color:rgba(247,247,247,.55);
-    font-size:11px;
-    letter-spacing:.06em;
-    text-transform:uppercase;
-    white-space:nowrap;
-  }
-  .cf-project-tile-arrow{color:rgba(247,247,247,.4);font-size:14px;line-height:1}
+  .cf-home-work .card-media{border-radius:var(--project-cover-radius)}
+  .cf-home-work .card-copy{padding:10px 0 28px}
+  .cf-home-work .card-copy h2{color:rgba(255,255,255,.8);font-size:clamp(15px,.875vw,17px);font-weight:400;line-height:1.32;letter-spacing:-.0015em}
+  .cf-home-work .card-copy p{min-height:0;margin-top:1px;color:rgba(255,255,255,.36);font-size:clamp(13px,.77vw,15px);font-weight:400;line-height:1.32;letter-spacing:-.0015em}
 }
 @media(prefers-reduced-motion:reduce){
-  .cf-home[data-intro-phase='wordmark'] .cf-wordmark:not(.is-lottie-on) span{animation:none;opacity:1;transform:none}
+  .cf-home[data-intro-phase='wordmark'] .cf-wordmark.is-font-fallback:not(.is-lottie-on) span{animation:none;opacity:1;transform:none}
   .cf-hero-particles,.cf-wordmark-lottie,.cf-hero-meta,.cf-intro-loader,.nav{transition:none!important}
 }
 .cf-footer{position:relative;isolation:isolate;padding:0;background:#000;color:#7d7d7d;overflow:hidden}
@@ -599,7 +547,7 @@ html[data-lang="zh"] .cf-statement h2>.lang-zh{display:block!important}
 .cf-close-connect-muted{color:#7d7d7d;font-size:clamp(16px,1.16vw,22px);font-weight:400;line-height:1.21}
 .cf-close-connect-main{color:#7d7d7d;font-size:clamp(16px,1.16vw,22px);font-weight:400;line-height:1.21}
 .cf-close-connect:hover .cf-close-connect-muted,.cf-close-connect:hover .cf-close-connect-main,.cf-close-connect:focus-visible .cf-close-connect-muted,.cf-close-connect:focus-visible .cf-close-connect-main{color:#fff}
-.cf-site-foot{background:#000;color:#7d7d7d;padding:clamp(28px,1.76vw,34px) 0 clamp(48px,4vw,72px)}
+.cf-site-foot{background:#000;color:#7d7d7d;padding:clamp(28px,1.76vw,34px) 0 clamp(16px,1.2vw,24px)}
 .cf-site-foot-row{display:grid;grid-template-columns:1fr 1fr;column-gap:0;align-items:start}
 .cf-site-foot-nav{display:flex;flex-direction:column;gap:1px}
 .cf-site-foot-nav:nth-of-type(1){grid-column:1}
@@ -608,14 +556,13 @@ html[data-lang="zh"] .cf-statement h2>.lang-zh{display:block!important}
 .cf-site-foot-copy{display:block;margin:0;padding:0;border:0;background:transparent;text-align:left;cursor:pointer}
 .cf-site-foot-nav a:hover,.cf-site-foot-nav a:focus-visible,.cf-site-foot-copy:hover,.cf-site-foot-copy:focus-visible{color:#fff}
 /* Match chrisfairchild.co close bar visual size (14px design × ~1.44 page scale ≈ 20px) */
-.cf-site-foot-meta{display:grid;grid-template-columns:1fr 1fr 1fr;align-items:baseline;gap:0;margin-top:0;color:#7d7d7d;font-size:clamp(14px,1.05vw,20px);font-weight:500;line-height:1.1;letter-spacing:.2px}
-.cf-site-foot-meta>span:nth-child(2){text-align:center}
+.cf-site-foot-meta{display:grid;grid-template-columns:1fr 1fr;align-items:baseline;gap:0;margin-top:0;color:#7d7d7d;font-size:clamp(14px,1.05vw,20px);font-weight:500;line-height:1.1;letter-spacing:.2px}
 .cf-site-foot-meta>span:last-child{text-align:right;letter-spacing:.4px}
 .cf-site-foot-time{text-align:right;font-variant-numeric:tabular-nums;color:#7d7d7d}
 @media(max-width:760px){
   .cf-footer{padding:0}
   .cf-close{width:auto;margin:0;padding-left:var(--sg-gutter-left,20px);padding-right:var(--sg-gutter-right,20px)}
-  .cf-close{--cf-close-section-gap:120px;padding-top:26svh;padding-bottom:88px}
+  .cf-close{--cf-close-section-gap:48px;padding-top:48px;padding-bottom:88px}
   .cf-close-bio{font-size:clamp(17px,4.6vw,22px);line-height:1.35}
   .cf-close-grid{grid-template-columns:1fr;gap:0;margin-top:64px}
   .cf-close-pair{grid-template-columns:minmax(96px,.42fr) 1fr;gap:16px;padding:16px 0}
@@ -623,11 +570,11 @@ html[data-lang="zh"] .cf-statement h2>.lang-zh{display:block!important}
   .cf-close-list{font-size:14px;line-height:1.4}
   .cf-close-connect{margin-top:56px}
   .cf-close-connect-muted,.cf-close-connect-main{font-size:18px}
-  .cf-site-foot{padding:28px 0 48px}
+  .cf-site-foot{padding:28px 0 16px}
   .cf-site-foot-row{grid-template-columns:1fr 1fr;gap:20px}
   .cf-site-foot-nav:nth-of-type(1){grid-column:1}
   .cf-site-foot-nav:nth-of-type(2){grid-column:2}
-  .cf-site-foot-meta{grid-template-columns:1fr 1fr 1fr;gap:0;margin-top:0}
+  .cf-site-foot-meta{grid-template-columns:1fr 1fr;gap:0;margin-top:0}
   .cf-site-foot-time{text-align:left}
 }
 
@@ -638,7 +585,7 @@ html[data-lang="zh"] .cf-statement h2>.lang-zh{display:block!important}
   .case-hero{padding-left:var(--sg-gutter-left,16px);padding-right:var(--sg-gutter-right,16px)}
   .case-flow{margin-left:var(--sg-gutter-left,16px);margin-right:var(--sg-gutter-right,16px)}
   .case-study>.placeholder{margin-left:var(--sg-gutter-left,16px);margin-right:var(--sg-gutter-right,16px)}
-  .next-project{padding-left:var(--sg-gutter-left,16px);padding-right:var(--sg-gutter-right,16px)}
+  .next-project{padding-left:var(--sg-gutter-left,18px);padding-right:var(--sg-gutter-right,18px)}
   .contact-page{padding-left:var(--sg-gutter-left,16px);padding-right:var(--sg-gutter-right,16px)}
 }
 

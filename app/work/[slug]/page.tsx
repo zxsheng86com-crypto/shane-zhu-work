@@ -27,13 +27,6 @@ const flyVideos = new Set([7, 8, 9, 10, 11, 12, 13, 14, 15, 19]);
 const auraSlots = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 const auraVideos = new Set([1, 4, 8]);
 
-/** Prefer desktop original when a slot was intentionally updated only on desktop. */
-const desktopOnlyUpdatedVideos = new Set([
-  'dji-romo/14', 'dji-romo/18',
-  'dji-avinox/06', 'dji-avinox/09', 'dji-avinox/12', 'dji-avinox/14', 'dji-avinox/16', 'dji-avinox/22',
-  'dji-power/03', 'dji-power/16', 'dji-aura/08',
-]);
-
 function pad2(slot: number) {
   return String(slot).padStart(2, '0');
 }
@@ -44,8 +37,6 @@ function publicMedia(...parts: string[]) {
 
 /** Only enable /mobile/ when the file actually exists — avoids dead <source> on phones. */
 function hasMobileVideo(folder: string, slot: number) {
-  const key = `${folder}/${pad2(slot)}`;
-  if (desktopOnlyUpdatedVideos.has(key)) return false;
   return existsSync(publicMedia(folder, 'mobile', `${pad2(slot)}.mp4`));
 }
 
@@ -87,7 +78,7 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
     : src && projectSlug === 'dji-fly'
       ? `${src}?v=20260930-jpg`
     : src && projectSlug === 'common-ground' ? `${src}?v=20260930-jpg`
-      : src && projectSlug === 'dji-avinox' ? `${src}?v=20260930-jpg` : src;
+      : src && projectSlug === 'dji-avinox' ? `${src}?v=20260930-r29` : src;
   const useMobile = Boolean(media && media.videos.has(slot) && hasMobileVideo(media.folder, slot));
   const poster = media && media.videos.has(slot) ? posterFor(media.folder, slot) : undefined;
   const lqip = media && !media.videos.has(slot) ? lqipFor(media.folder, slot) : undefined;

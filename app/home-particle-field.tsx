@@ -36,15 +36,15 @@ void main() {
   p += vec2(drift, -drift * 0.7);
   gl_Position = vec4(p, 0.0, 1.0);
   gl_PointSize = clamp(aSize * uDpr * (1.0 + depth * 0.12), 1.0, 6.0);
-  // Desynced twinkle: auto-play life on every device; mobile leans on this instead of 3D.
-  float twinkleSpeed = 0.55 + fract(aSeed * 5.738) * 2.35;
+  float twinkleSpeed = (0.55 + fract(aSeed * 5.738) * 2.35) * (1.0 + 0.55 * clamp(uTwinkle - 1.0, 0.0, 2.0));
   float twinklePhase = aSeed * 6.28318;
   float w1 = 0.5 + 0.5 * sin(uTime * twinkleSpeed + twinklePhase);
   float w2 = 0.5 + 0.5 * sin(uTime * (twinkleSpeed * 1.67 + 0.35) + twinklePhase * 1.9);
   float pulse = mix(w1, pow(w1, 2.4), 0.55) * 0.72 + w2 * 0.28;
+  // Stronger alpha swing when uTwinkle > 1 (mobile life without gyro).
   float range = 0.14 * uTwinkle;
-  float twinkle = (1.0 - range * 0.85) + range * pulse;
-  vAlpha = min(1.0, aAlpha * 1.4) * twinkle;
+  float twinkle = (1.0 - range * 0.92) + range * pulse;
+  vAlpha = min(1.0, aAlpha * (1.4 + 0.25 * clamp(uTwinkle - 1.0, 0.0, 2.0))) * twinkle;
 }`;
 
 const fragmentShader = `#version 300 es
@@ -84,13 +84,12 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const isMobile = window.matchMedia('(max-width: 800px), (pointer: coarse)').matches;
-    const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
-    // Same volumetric particle field on mobile and desktop. Desktop adds pointer tilt;
-    // mobile keeps full depth + density (no mouse), optional light idle sway so layers read.
-    const preferStatic = reducedMotion.matches || saveData;
-    const pointerInteractive = !isMobile && !preferStatic;
-    const depthAmount = preferStatic ? 0 : 1;
-    const twinkleAmount = preferStatic ? 0 : 1;
+    // ponytail: never treat saveData as "show static photo" — keep trying WebGL
+    const quiet = reducedMotion.matches;
+    const pointerInteractive = !isMobile && !quiet;
+    const depthAmount = quiet ? 0 : 1;
+    // Mobile: stronger twinkle replaces removed gyro life.
+    const twinkleAmount = quiet ? 0 : isMobile ? 2.8 : 1;
     const sampleCols = isMobile ? 280 : window.matchMedia('(max-width: 1199px)').matches ? 280 : 460;
 
     let gl: WebGL2RenderingContext | null = null;
@@ -115,19 +114,10 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
     let depthLocation: WebGLUniformLocation | null = null;
     let twinkleLocation: WebGLUniformLocation | null = null;
     let yLiftLocation: WebGLUniformLocation | null = null;
-    // Desktop keeps the lifted galaxy; mobile centers in the first screen.
     const yLift = isMobile ? 0.04 : 0.28;
     let startTime = 0;
     let lastTime = 0;
     let initTimer = 0;
-    // Declared before draw — gyro is optional and must never block particle init.
-    let gyroActive = false;
-    let orientationHandler: ((event: DeviceOrientationEvent) => void) | null = null;
-    let motionHandler: ((event: DeviceMotionEvent) => void) | null = null;
-    let gyroArm: ((event?: Event) => void) | null = null;
-    let baseGamma: number | null = null;
-    let baseBeta: number | null = null;
-    let gotOrientation = false;
 
     const resize = () => {
       if (!gl) return;
@@ -137,7 +127,6 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
       canvas.width = Math.round(rect.width * dpr);
       canvas.height = Math.round(rect.height * dpr);
       gl.viewport(0, 0, canvas.width, canvas.height);
-      // Cover (like pinnacl): fill the field, crop overflow — do NOT letterbox/shrink with width.
       const imageAspect = image.naturalWidth / image.naturalHeight;
       const fieldAspect = rect.width / rect.height;
       if (fieldAspect > imageAspect) {
@@ -157,17 +146,6 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
       lastTime = time;
       if (pointerInteractive) {
         const ease = reducedMotion.matches ? 1 : 1 - Math.exp(-12 * delta);
-        pointerX += (targetX - pointerX) * ease;
-        pointerY += (targetY - pointerY) * ease;
-      } else if (isMobile && depthAmount > 0 && !reducedMotion.matches) {
-        if (!gyroActive) {
-          // Soft idle sway until gyro permission / first orientation event.
-          const t = (time - startTime) / 1000;
-          targetX = Math.sin(t * 0.35) * 0.22;
-          targetY = Math.cos(t * 0.28) * 0.14;
-        }
-        // Snappier follow when gyro is driving; softer while idle.
-        const ease = 1 - Math.exp(-(gyroActive ? 10 : 6) * delta);
         pointerX += (targetX - pointerX) * ease;
         pointerY += (targetY - pointerY) * ease;
       }
@@ -206,121 +184,6 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
       targetY = 0;
     };
 
-    // Mobile-only gyro → same ±1 pointer space as desktop mouse. Desktop never enters this path.
-    // Use the same isMobile gate as the particle field (already true on phones).
-    const useGyro = isMobile && !preferStatic;
-    const DeviceOrientation = typeof DeviceOrientationEvent !== 'undefined' ? DeviceOrientationEvent : null;
-    const DeviceMotion = typeof DeviceMotionEvent !== 'undefined' ? DeviceMotionEvent : null;
-    const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-
-    const applyGyroTargets = (x: number, y: number) => {
-      targetX = clamp(x, -1, 1);
-      targetY = clamp(y, -1, 1);
-      gyroActive = true;
-      if (visible && !frame) frame = requestAnimationFrame(animate);
-    };
-
-    const onDeviceOrientation = (event: DeviceOrientationEvent) => {
-      if (destroyed || !useGyro || reducedMotion.matches || depthAmount <= 0) return;
-      const gamma = typeof event.gamma === 'number' ? event.gamma : null;
-      const beta = typeof event.beta === 'number' ? event.beta : null;
-      if (gamma === null && beta === null) return;
-      // Calibrate against the first reading so tilt-from-rest is obvious.
-      if (gamma !== null && baseGamma === null) baseGamma = gamma;
-      if (beta !== null && baseBeta === null) baseBeta = beta;
-      const dg = gamma !== null ? gamma - (baseGamma ?? 0) : 0;
-      const db = beta !== null ? beta - (baseBeta ?? 0) : 0;
-      gotOrientation = true;
-      // Stronger than mouse range so phone tilt reads clearly.
-      applyGyroTargets(dg / 16, db / 20);
-    };
-
-    const onDeviceMotion = (event: DeviceMotionEvent) => {
-      if (destroyed || !useGyro || reducedMotion.matches || depthAmount <= 0) return;
-      // Only when orientation events never arrive (common on some WebViews / HTTP).
-      if (gotOrientation) return;
-      const acc = event.accelerationIncludingGravity;
-      if (!acc || typeof acc.x !== 'number') return;
-      const ax = acc.x;
-      const az = typeof acc.z === 'number' ? acc.z : 0;
-      applyGyroTargets(ax / 5, -az / 5);
-    };
-
-    const attachGyro = () => {
-      if (destroyed || !useGyro) return;
-      try {
-        if (!orientationHandler && DeviceOrientation) {
-          orientationHandler = onDeviceOrientation;
-          window.addEventListener('deviceorientation', orientationHandler, { passive: true });
-          // Some Android builds prefer the absolute variant.
-          window.addEventListener('deviceorientationabsolute' as 'deviceorientation', orientationHandler, { passive: true });
-        }
-        if (!motionHandler && DeviceMotion) {
-          motionHandler = onDeviceMotion;
-          window.addEventListener('devicemotion', motionHandler, { passive: true });
-        }
-      } catch {
-        /* ignore */
-      }
-    };
-
-    // Test/prod probe: lets automation inject orientation and read follow state.
-    (window as Window & { __cfGyro?: unknown }).__cfGyro = {
-      getState: () => ({
-        useGyro,
-        gyroActive,
-        attached: Boolean(orientationHandler),
-        targetX,
-        targetY,
-        pointerX,
-        pointerY,
-        baseGamma,
-        baseBeta,
-      }),
-      attach: attachGyro,
-      /** Simulate phone tilt. First call calibrates; later calls should move targets. */
-      injectOrientation: (gamma: number, beta: number) => {
-        attachGyro();
-        onDeviceOrientation({ gamma, beta, alpha: 0 } as DeviceOrientationEvent);
-      },
-      injectMotion: (x: number, z: number) => {
-        attachGyro();
-        onDeviceMotion({
-          accelerationIncludingGravity: { x, y: 0, z },
-        } as DeviceMotionEvent);
-      },
-    };
-
-    const requestGyroPermission = () => {
-      if (destroyed || !useGyro) return;
-      const tasks: Array<Promise<string>> = [];
-      try {
-        const DOE = DeviceOrientation as (typeof DeviceOrientationEvent & {
-          requestPermission?: () => Promise<'granted' | 'denied' | 'default'>;
-        }) | null;
-        if (DOE && typeof DOE.requestPermission === 'function') {
-          tasks.push(DOE.requestPermission().catch(() => 'denied'));
-        }
-        const DME = DeviceMotion as (typeof DeviceMotionEvent & {
-          requestPermission?: () => Promise<'granted' | 'denied' | 'default'>;
-        }) | null;
-        if (DME && typeof DME.requestPermission === 'function') {
-          tasks.push(DME.requestPermission().catch(() => 'denied'));
-        }
-      } catch {
-        /* ignore */
-      }
-      if (tasks.length) {
-        Promise.all(tasks).then((states) => {
-          if (!destroyed && states.some((state) => state === 'granted')) attachGyro();
-          // Even if denied/failed, try attach — some browsers still emit motion on HTTP.
-          else if (!destroyed) attachGyro();
-        });
-      } else {
-        attachGyro();
-      }
-    };
-
     let readyNotified = false;
     let readyWatchdog = 0;
     const reportReady = () => {
@@ -329,16 +192,17 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
       window.clearTimeout(readyWatchdog);
       onReady?.();
     };
+    // Never reveal the sampling photo — black hero if WebGL stalls.
     const showFallback = () => {
       field.classList.add('is-fallback');
+      field.classList.remove('is-ready');
       reportReady();
     };
-    readyWatchdog = window.setTimeout(showFallback, isMobile ? 2500 : 5000);
+    readyWatchdog = window.setTimeout(showFallback, isMobile ? 4000 : 6000);
 
     const initialize = () => {
       try {
         if (destroyed || !image.naturalWidth) return;
-        if (preferStatic) return showFallback();
 
         gl = canvas.getContext('webgl2', { alpha: true, antialias: false, depth: false, powerPreference: 'low-power' });
         if (!gl) return showFallback();
@@ -398,7 +262,6 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
         const normalize = maxLuminance > 0 ? 0.98 / maxLuminance : 1;
         const MID_LAYER_MIN = 3;
         const MID_LAYER_MAX = 5;
-        // Mobile: slightly denser keep threshold so the lighter grid still reads as a galaxy.
         const keepFloor = 0.022;
         const keepCeil = 0.072;
         for (let y = 0; y < rows; y++) {
@@ -416,7 +279,6 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
               points.push(px, py, (layer + 0.5) / LAYERS, size, alpha, random());
             }
 
-            // Core mass extras — same on mobile; scale count slightly for perf.
             if (light < 0.15) continue;
             const core = Math.pow((light - 0.15) / 0.85, 1.28);
             let expectedMid = core * (isMobile ? 2.4 : 3.15);
@@ -460,6 +322,7 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
         gl.clearColor(0, 0, 0, 0);
         resize();
+        field.classList.remove('is-fallback');
         field.classList.add('is-ready');
         reportReady();
         if (visible) frame = requestAnimationFrame(animate);
@@ -494,14 +357,8 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
     }
     reducedMotion.addEventListener('change', onMotionPreferenceChange);
 
-    // Defer past first paint / loader so mobile sampling never blocks intro.
     const scheduleInit = () => {
       if (destroyed) return;
-      if (preferStatic) {
-        showFallback();
-        return;
-      }
-      // Yield to the browser so Lottie/paint can run before the heavy sample pass.
       initTimer = window.setTimeout(() => {
         if (!destroyed) initialize();
       }, isMobile ? 280 : 0);
@@ -509,50 +366,15 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
     const onImageError = () => {
       if (!destroyed) showFallback();
     };
-    if (preferStatic) {
-      showFallback();
-    } else if (image.complete && image.naturalWidth) {
+    if (image.complete && image.naturalWidth) {
       scheduleInit();
     } else {
       image.addEventListener('load', scheduleInit, { once: true });
       image.addEventListener('error', onImageError, { once: true });
     }
 
-    // Arm gyro AFTER particle init is scheduled — never block onReady / intro.
-    if (useGyro) {
-      try {
-        const needsGesture = Boolean(
-          (DeviceOrientation as { requestPermission?: unknown } | null)?.requestPermission
-          || (DeviceMotion as { requestPermission?: unknown } | null)?.requestPermission,
-        );
-        if (needsGesture) {
-          // iOS: permission must run inside a user gesture. Arm touch + click early.
-          gyroArm = () => {
-            if (!gyroArm) return;
-            const arm = gyroArm;
-            gyroArm = null;
-            window.removeEventListener('pointerdown', arm, true);
-            window.removeEventListener('touchstart', arm, true);
-            window.removeEventListener('click', arm, true);
-            requestGyroPermission();
-          };
-          window.addEventListener('pointerdown', gyroArm, { capture: true, passive: true });
-          window.addEventListener('touchstart', gyroArm, { capture: true, passive: true });
-          window.addEventListener('click', gyroArm, { capture: true, passive: true });
-        } else {
-          // Android / others: listen immediately (no prompt).
-          window.setTimeout(() => {
-            if (!destroyed) attachGyro();
-          }, 0);
-        }
-      } catch {
-        /* ignore — particles still run with idle sway */
-      }
-    }
-
     return () => {
       destroyed = true;
-      delete (window as Window & { __cfGyro?: unknown }).__cfGyro;
       window.clearTimeout(readyWatchdog);
       window.clearTimeout(initTimer);
       cancelAnimationFrame(frame);
@@ -564,16 +386,6 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
         window.removeEventListener('pointermove', onPointerMove);
         window.removeEventListener('blur', onBlur);
       }
-      if (gyroArm) {
-        window.removeEventListener('pointerdown', gyroArm, true);
-        window.removeEventListener('touchstart', gyroArm, true);
-        window.removeEventListener('click', gyroArm, true);
-      }
-      if (orientationHandler) {
-        window.removeEventListener('deviceorientation', orientationHandler);
-        window.removeEventListener('deviceorientationabsolute' as 'deviceorientation', orientationHandler);
-      }
-      if (motionHandler) window.removeEventListener('devicemotion', motionHandler);
       reducedMotion.removeEventListener('change', onMotionPreferenceChange);
       if (gl && vao) gl.deleteVertexArray(vao);
       if (gl && buffer) gl.deleteBuffer(buffer);
@@ -582,10 +394,9 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
   }, []);
 
   return <div ref={fieldRef} className="cf-hero-particles">
-    <picture>
-      {/* Mobile-first: default src is the light asset so phones never pull the 3.7MB desktop PNG. */}
+    <picture aria-hidden="true">
       <source media="(min-width: 801px)" srcSet="/media/home-galaxy.jpg" />
-      {/* eslint-disable-next-line @next/next/no-img-element -- need direct img for WebGL sampling */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- sampling source for WebGL only; never shown */}
       <img
         ref={imageRef}
         src="/media/home-galaxy-mobile.jpg"
