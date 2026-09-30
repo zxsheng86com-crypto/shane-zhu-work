@@ -11,6 +11,7 @@ import type { CSSProperties } from 'react';
 import mediaDimensions from '../../media-dimensions.json';
 import { Localized } from '../../localized';
 import { CaseProjectPrefetch } from '../../project-prefetch';
+import { shouldEagerBindCaseSlot, shouldPriorityCaseSlot } from '../../project-opening';
 import { CaseEntryGate } from './case-entry-gate';
 
 export function generateStaticParams() {
@@ -85,8 +86,8 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
   const lqip = media && !media.videos.has(slot) ? lqipFor(media.folder, slot) : undefined;
   return <figure className={`placeholder ${tone}${src ? ' has-media' : ''}${src === '/media/dji-romo/10.mp4' ? ' trim-edge' : ''}`} style={size ? { '--media-ratio': `${size.width} / ${size.height}` } as CSSProperties : undefined} data-slot={pad2(slot)}>
     {mediaSrc && (media?.videos.has(slot)
-      ? <ViewportVideo key={`${projectSlug}-${pad2(slot)}-video`} src={mediaSrc} width={size?.width} height={size?.height} mobile={useMobile} poster={poster} />
-      : <CaseStill key={`${projectSlug}-${pad2(slot)}-still`} src={mediaSrc} lqip={lqip} priority={slot === 1} />)}
+      ? <ViewportVideo key={`${projectSlug}-${pad2(slot)}-video`} src={mediaSrc} width={size?.width} height={size?.height} mobile={useMobile} poster={poster} eager={shouldEagerBindCaseSlot(slot)} />
+      : <CaseStill key={`${projectSlug}-${pad2(slot)}-still`} src={mediaSrc} lqip={lqip} priority={shouldPriorityCaseSlot(slot)} />)}
     {showSlotNumber && <strong className="slot-number">{String(number).padStart(2, '0')}</strong>}
   </figure>;
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { loadCaseEntryPack } from '../../project-opening';
+import { loadCaseEntryPack, warmCaseLookahead } from '../../project-opening';
 
 const CaseEntryContext = createContext(true);
 
@@ -14,8 +14,8 @@ const ENTRY_TIMEOUT_MS = 12000;
 
 /**
  * Black progress gate on case entry.
- * Warms the first-screens opening pack (real byte/image progress), then releases
- * the page so existing viewport lazy-load continues for the rest.
+ * Finishes slots 01–06 with real progress, then releases the page and
+ * immediately warms 07–08 while the visitor is still on the first frames.
  */
 export function CaseEntryGate({ slug, children }: { slug: string; children: ReactNode }) {
   const [progress, setProgress] = useState(0);
@@ -29,7 +29,11 @@ export function CaseEntryGate({ slug, children }: { slug: string; children: Reac
       if (cancelled) return;
       setProgress(100);
       finishTimer = window.setTimeout(() => {
-        if (!cancelled) setReady(true);
+        if (!cancelled) {
+          setReady(true);
+          // While viewing the top: prefetch the next two slots into HTTP cache.
+          void warmCaseLookahead(slug);
+        }
       }, 180);
     };
 

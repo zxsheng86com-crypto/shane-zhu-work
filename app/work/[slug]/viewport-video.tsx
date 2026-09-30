@@ -58,12 +58,15 @@ export function ViewportVideo({
   height,
   mobile = false,
   poster,
+  eager = false,
 }: {
   src: string;
   width?: number;
   height?: number;
   mobile?: boolean;
   poster?: string;
+  /** Bind as soon as the entry gate opens (slots 01–08), keep forever. */
+  eager?: boolean;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const loopDelayMs = Math.max(0, videoLoopDelays[stripQuery(src)] ?? 0);
@@ -244,6 +247,17 @@ export function ViewportVideo({
     document.addEventListener('visibilitychange', onVisibility);
     reducedMotion.addEventListener('change', onVisibility);
 
+    // Slots 01–08: bind immediately after the gate so 07/08 are ready
+    // while the visitor is still on the first frames. Never unload after.
+    if (eager) {
+      if (poster) {
+        const img = new window.Image();
+        img.decoding = 'async';
+        img.src = poster;
+      }
+      ensureBound();
+    }
+
     return () => {
       cancelled = true;
       if (replayTimer) clearTimeout(replayTimer);
@@ -262,7 +276,7 @@ export function ViewportVideo({
       reducedMotion.removeEventListener('change', onVisibility);
       freeze();
     };
-  }, [activeSrc, src, mobile, loopDelayMs, poster, entryReady]);
+  }, [activeSrc, src, mobile, loopDelayMs, poster, entryReady, eager]);
 
   return (
     <span className={`case-video${ready ? ' is-ready' : ''}${poster ? ' has-poster' : ''}`}>

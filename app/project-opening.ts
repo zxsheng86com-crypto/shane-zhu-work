@@ -20,99 +20,147 @@ export const projectChain = [
 
 export type ProjectSlug = (typeof projectChain)[number];
 
-/** First screens of each case — hero + next 1–2 media blocks (not the full project). */
-export const openingPacks: Record<ProjectSlug, OpeningPack> = {
+/** How many media slots the entry progress gate must finish. */
+export const CASE_ENTRY_SLOTS = 6;
+/** Extra slots to warm once the page is open (while viewing the top). */
+export const CASE_LOOKAHEAD_SLOTS = 2;
+
+type CaseCatalog = {
+  slug: ProjectSlug;
+  href: string;
+  folder: string;
+  videoSlots: ReadonlySet<number>;
+  /** Cache-bust query matching Placeholder in page.tsx */
+  version: string;
+  maxSlot: number;
+};
+
+const catalogs: Record<ProjectSlug, CaseCatalog> = {
   'common-ground': {
     slug: 'common-ground',
     href: '/work/common-ground',
-    images: [
-      '/media/dji-romo/01.jpg?v=20260930-jpg',
-      '/media/dji-romo/03.jpg?v=20260930-jpg',
-      '/media/dji-romo/04.jpg?v=20260930-jpg',
-      '/media/dji-romo/05.jpg?v=20260930-jpg',
-    ],
-    videos: [
-      '/media/dji-romo/02.mp4?v=20260923-r3',
-      '/media/dji-romo/06.mp4?v=20260923-r3',
-      '/media/dji-romo/07.mp4?v=20260923-r3',
-    ],
-    posters: [
-      '/media/dji-romo/posters/02.jpg',
-      '/media/dji-romo/posters/06.jpg',
-      '/media/dji-romo/posters/07.jpg',
-    ],
+    folder: 'dji-romo',
+    videoSlots: new Set([2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 28, 31]),
+    version: '20260930-jpg',
+    maxSlot: 31,
   },
   'dji-avinox': {
     slug: 'dji-avinox',
     href: '/work/dji-avinox',
-    images: [
-      '/media/dji-avinox/01.jpg?v=20260930-jpg',
-      '/media/dji-avinox/03.jpg?v=20260930-r14',
-      '/media/dji-avinox/05.jpg?v=20260930-r14',
-    ],
-    videos: [
-      '/media/dji-avinox/02.mp4?v=20260923-r1',
-      '/media/dji-avinox/04.mp4?v=20260923-r1',
-    ],
-    posters: [
-      '/media/dji-avinox/posters/02.jpg',
-      '/media/dji-avinox/posters/04.jpg',
-    ],
+    folder: 'dji-avinox',
+    videoSlots: new Set([2, 4, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 22, 23, 24, 25, 29, 31]),
+    version: '20260930-r14',
+    maxSlot: 32,
   },
   'dji-power': {
     slug: 'dji-power',
     href: '/work/dji-power',
-    images: [
-      '/media/dji-power/01.jpg?v=20260930-jpg',
-      '/media/dji-power/02.jpg?v=20260930-jpg',
-      '/media/dji-power/04.jpg?v=20260930-jpg',
-      '/media/dji-power/05.jpg?v=20260930-jpg',
-    ],
-    videos: ['/media/dji-power/03.mp4?v=20260923-r1'],
-    posters: ['/media/dji-power/posters/03.jpg'],
+    folder: 'dji-power',
+    videoSlots: new Set([3, 14, 16]),
+    version: '20260930-jpg',
+    maxSlot: 18,
   },
   'dji-fly': {
     slug: 'dji-fly',
     href: '/work/dji-fly',
-    images: [
-      '/media/dji-fly/01.jpg?v=20260930-jpg',
-      '/media/dji-fly/02.jpg?v=20260930-jpg',
-      '/media/dji-fly/03.jpg?v=20260930-jpg',
-      '/media/dji-fly/04.jpg?v=20260930-jpg',
-      '/media/dji-fly/05.jpg?v=20260930-jpg',
-      '/media/dji-fly/06.jpg?v=20260930-jpg',
-    ],
-    videos: [
-      '/media/dji-fly/07.mp4?v=20260923-r3',
-      '/media/dji-fly/08.mp4?v=20260923-r3',
-    ],
-    posters: [
-      '/media/dji-fly/posters/07.jpg',
-      '/media/dji-fly/posters/08.jpg',
-    ],
+    folder: 'dji-fly',
+    videoSlots: new Set([7, 8, 9, 10, 11, 12, 13, 14, 15, 19]),
+    version: '20260930-jpg',
+    maxSlot: 24,
   },
   'dji-aura-logo': {
     slug: 'dji-aura-logo',
     href: '/work/dji-aura-logo',
-    images: [
-      '/media/dji-aura/02.jpg?v=20260930-jpg',
-      '/media/dji-aura/03.jpg?v=20260930-jpg',
-      '/media/dji-aura/05.jpg?v=20260930-jpg',
-      '/media/dji-aura/06.jpg?v=20260930-jpg',
-    ],
-    videos: [
-      '/media/dji-aura/01.mp4?v=20260922-r2',
-      '/media/dji-aura/04.mp4?v=20260922-r2',
-    ],
-    posters: [
-      '/media/dji-aura/posters/01.jpg',
-      '/media/dji-aura/posters/04.jpg',
-    ],
+    folder: 'dji-aura',
+    videoSlots: new Set([1, 4, 8]),
+    version: '20260930-jpg',
+    maxSlot: 12,
   },
+};
+
+function pad2(slot: number) {
+  return String(slot).padStart(2, '0');
+}
+
+function mediaUrl(folder: string, slot: number, ext: 'jpg' | 'mp4', version: string) {
+  return `/media/${folder}/${pad2(slot)}.${ext}?v=${version}`;
+}
+
+function posterUrl(folder: string, slot: number) {
+  return `/media/${folder}/posters/${pad2(slot)}.jpg`;
+}
+
+export type CaseMediaItem = {
+  slot: number;
+  kind: 'image' | 'video';
+  url: string;
+  poster?: string;
+};
+
+function itemForSlot(catalog: CaseCatalog, slot: number): CaseMediaItem | null {
+  if (slot < 1 || slot > catalog.maxSlot) return null;
+  if (catalog.videoSlots.has(slot)) {
+    return {
+      slot,
+      kind: 'video',
+      url: mediaUrl(catalog.folder, slot, 'mp4', catalog.version),
+      poster: posterUrl(catalog.folder, slot),
+    };
+  }
+  return {
+    slot,
+    kind: 'image',
+    url: mediaUrl(catalog.folder, slot, 'jpg', catalog.version),
+  };
+}
+
+/** Ordered media items for a slot range (inclusive). */
+export function caseMediaRange(slug: string, fromSlot: number, toSlot: number): CaseMediaItem[] {
+  if (!isProjectSlug(slug)) return [];
+  const catalog = catalogs[slug];
+  const items: CaseMediaItem[] = [];
+  for (let slot = fromSlot; slot <= toSlot; slot += 1) {
+    const item = itemForSlot(catalog, slot);
+    if (item) items.push(item);
+  }
+  return items;
+}
+
+/** Home/browse light pack: first entry stills + posters (no full MP4 bodies). */
+function packFromCatalog(catalog: CaseCatalog): OpeningPack {
+  const images: string[] = [];
+  const videos: string[] = [];
+  const posters: string[] = [];
+  for (let slot = 1; slot <= CASE_ENTRY_SLOTS; slot += 1) {
+    const item = itemForSlot(catalog, slot);
+    if (!item) continue;
+    if (item.kind === 'video') {
+      videos.push(item.url);
+      if (item.poster) posters.push(item.poster);
+    } else {
+      images.push(item.url);
+    }
+  }
+  return {
+    slug: catalog.slug,
+    href: catalog.href,
+    images,
+    videos,
+    posters,
+  };
+}
+
+export const openingPacks: Record<ProjectSlug, OpeningPack> = {
+  'common-ground': packFromCatalog(catalogs['common-ground']),
+  'dji-avinox': packFromCatalog(catalogs['dji-avinox']),
+  'dji-power': packFromCatalog(catalogs['dji-power']),
+  'dji-fly': packFromCatalog(catalogs['dji-fly']),
+  'dji-aura-logo': packFromCatalog(catalogs['dji-aura-logo']),
 };
 
 const warmed = new Set<string>();
 const warming = new Map<string, Promise<void>>();
+const lookaheadWarming = new Map<string, Promise<void>>();
 let prefetchGate: Promise<void> = Promise.resolve();
 
 function mediaKey(url: string) {
@@ -125,7 +173,7 @@ function mediaKey(url: string) {
 }
 
 function isProjectSlug(slug: string): slug is ProjectSlug {
-  return slug in openingPacks;
+  return slug in catalogs;
 }
 
 export function nextProjectSlug(slug: string) {
@@ -199,7 +247,6 @@ export function warmOpeningPack(slug: string, prefetchRoute?: (href: string) => 
     // Justified-style: warm light stand-ins first (poster / still), not full MP4 bodies.
     for (const poster of pack.posters) await warmUrl(poster, 'poster');
     for (const image of pack.images) await warmUrl(image, 'image');
-    // Skip full video byte warm — the case player owns buffering with visible priority.
   })().finally(() => {
     warming.delete(slug);
   });
@@ -235,7 +282,7 @@ function stripQuery(url: string) {
   return url.split('?')[0];
 }
 
-/** Prefer /mobile/ sibling when the viewport is phone-sized and the file exists in pack paths. */
+/** Prefer /mobile/ sibling when the viewport is phone-sized. */
 function entryVideoUrl(desktopUrl: string) {
   if (typeof window === 'undefined') return desktopUrl;
   if (!window.matchMedia('(max-width: 800px)').matches) return desktopUrl;
@@ -292,8 +339,24 @@ function loadImageProgress(url: string, onShare: (ratio: number) => void) {
   });
 }
 
+type ProgressUnit = { kind: 'image' | 'video'; url: string };
+
+function entryUnits(slug: ProjectSlug): ProgressUnit[] {
+  const items = caseMediaRange(slug, 1, CASE_ENTRY_SLOTS);
+  const units: ProgressUnit[] = [];
+  for (const item of items) {
+    if (item.kind === 'video') {
+      if (item.poster) units.push({ kind: 'image', url: item.poster });
+      units.push({ kind: 'video', url: entryVideoUrl(item.url) });
+    } else {
+      units.push({ kind: 'image', url: item.url });
+    }
+  }
+  return units;
+}
+
 /**
- * Case-entry gate loader: posters + stills + first-screen videos (mobile file when narrow).
+ * Case-entry gate: slots 01–06 (stills + posters + video bytes).
  * Reports 0–100. Safe to call when slug is unknown (resolves immediately at 100).
  */
 export async function loadCaseEntryPack(slug: string, onProgress?: (value: number) => void) {
@@ -302,36 +365,74 @@ export async function loadCaseEntryPack(slug: string, onProgress?: (value: numbe
     return;
   }
 
-  const pack = openingPacks[slug];
-  const images = [...pack.posters, ...pack.images];
-  const videos = pack.videos.map(entryVideoUrl);
-  const units = images.length + videos.length;
-  if (!units) {
+  const units = entryUnits(slug);
+  if (!units.length) {
     onProgress?.(100);
     return;
   }
 
-  const shares = new Array(units).fill(0);
+  const shares = new Array(units.length).fill(0);
   const report = () => {
     const sum = shares.reduce((a, b) => a + b, 0);
-    onProgress?.(Math.max(0, Math.min(99, Math.round((sum / units) * 100))));
+    onProgress?.(Math.max(0, Math.min(99, Math.round((sum / units.length) * 100))));
   };
 
-  const tasks: Promise<void>[] = [];
-  images.forEach((url, index) => {
-    tasks.push(loadImageProgress(url, (ratio) => {
-      shares[index] = ratio;
-      report();
-    }));
-  });
-  videos.forEach((url, offset) => {
-    const index = images.length + offset;
-    tasks.push(fetchWithProgress(url, (ratio) => {
-      shares[index] = ratio;
-      report();
-    }));
+  await Promise.all(
+    units.map((unit, index) => {
+      if (unit.kind === 'video') {
+        return fetchWithProgress(unit.url, (ratio) => {
+          shares[index] = ratio;
+          report();
+        });
+      }
+      return loadImageProgress(unit.url, (ratio) => {
+        shares[index] = ratio;
+        report();
+      });
+    }),
+  );
+  onProgress?.(100);
+}
+
+/**
+ * After the gate opens: warm slots 07–08 into HTTP cache while the user
+ * is still looking at the first frames. Videos stay attached once the
+ * player binds them (see ViewportVideo keep-alive).
+ */
+export function warmCaseLookahead(slug: string) {
+  if (!isProjectSlug(slug)) return Promise.resolve();
+  const existing = lookaheadWarming.get(slug);
+  if (existing) return existing;
+
+  const from = CASE_ENTRY_SLOTS + 1;
+  const to = CASE_ENTRY_SLOTS + CASE_LOOKAHEAD_SLOTS;
+  const items = caseMediaRange(slug, from, to);
+  if (!items.length) return Promise.resolve();
+
+  const task = (async () => {
+    for (const item of items) {
+      if (!networkAllowsPrefetch()) return;
+      if (item.kind === 'video') {
+        if (item.poster) await warmUrl(item.poster, 'poster');
+        await warmUrl(entryVideoUrl(item.url), 'video');
+      } else {
+        await warmUrl(item.url, 'image');
+      }
+    }
+  })().finally(() => {
+    lookaheadWarming.delete(slug);
   });
 
-  await Promise.all(tasks);
-  onProgress?.(100);
+  lookaheadWarming.set(slug, task);
+  return task;
+}
+
+/** Slots that bind as soon as the entry gate opens (07–08 lookahead). */
+export function shouldEagerBindCaseSlot(slot: number) {
+  return slot > CASE_ENTRY_SLOTS && slot <= CASE_ENTRY_SLOTS + CASE_LOOKAHEAD_SLOTS;
+}
+
+/** Stills in the entry + lookahead window should decode eagerly. */
+export function shouldPriorityCaseSlot(slot: number) {
+  return slot >= 1 && slot <= CASE_ENTRY_SLOTS + CASE_LOOKAHEAD_SLOTS;
 }
