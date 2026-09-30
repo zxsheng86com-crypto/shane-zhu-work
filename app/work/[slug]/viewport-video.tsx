@@ -8,15 +8,15 @@ export const videoLoopDelays: Record<string, number> = {
 };
 
 /**
- * Case video — anti-scramble rules (Web + mobile):
+ * Case video player — Chrome + mobile.
  *
- * 1. Never paint until THIS element has a verified first frame (visibility:hidden
- *    until is-ready — opacity alone is not enough on Safari).
- * 2. Cap concurrent attached <video src> globally (decoder frame bleed).
- * 3. Attach only when in/near view; detach when leaving so the next slot cannot
- *    inherit another clip's frame.
- * 4. Reveal only after requestVideoFrameCallback (or double-rAF) AND currentSrc
- *    filename matches the requested asset.
+ * Scramble (slot A showing slot B art) comes from concurrent <video> decoders
+ * and revealing before THIS element's currentSrc is confirmed. Fix:
+ * - Count-based attach semaphore (no stale DOM node Set)
+ * - Attach only when in view; detach when leaving
+ * - No HTML poster attr (CSS poster only — avoids mixed poster/frame flashes)
+ * - Opaque mask until path-matched first frame
+ * - Never put key= on the ref'd <video> (breaks cleanup vs remount)
  */
 
 function isNarrowViewport() {
@@ -37,42 +37,48 @@ function pickSrc(src: string, mobileSrc: string, allowMobile: boolean) {
   return src;
 }
 
-function fileName(url: string) {
-  return stripQuery(url).split('/').pop() || '';
+function pathOf(url: string) {
+  const bare = stripQuery(url);
+  try {
+    return bare.startsWith('http') ? new URL(bare).pathname : bare;
+  } catch {
+    return bare;
+  }
 }
 
-function srcMatches(video: HTMLVideoElement, wantUrl: string) {
-  const want = fileName(wantUrl);
-  if (!want) return false;
-  if (video.dataset.src !== wantUrl) return false;
+/** True when the element is actually decoding the requested file (full path, not just 02.mp4). */
+function isBoundTo(video: HTMLVideoElement, wantUrl: string) {
+  if (video.dataset.want !== wantUrl) return false;
+  const wantPath = pathOf(wantUrl);
   const current = video.currentSrc || video.getAttribute('src') || '';
   if (!current) return false;
-  return current.includes(want);
+  return pathOf(current).endsWith(wantPath) || pathOf(current) === wantPath;
 }
 
-/** Global attach pool — Safari bleeds frames across simultaneous decoders. */
-const MAX_OWNERS = 2;
-const owners = new Set<HTMLVideoElement>();
-const waiters: Array<{ video: HTMLVideoElement; resolve: () => void }> = [];
+/** Max simultaneous attached sources site-wide (pair = 2). Uses a count, not element refs. */
+const MAX_ATTACHED = 2;
+let attachedCount = 0;
+const attachWaiters: Array<() => void> = [];
 
-function claimOwner(video: HTMLVideoElement) {
-  return new Promise<void>((resolve) => {
-    if (owners.has(video) || owners.size < MAX_OWNERS) {
-      owners.add(video);
-      resolve();
-      return;
-    }
-    waiters.push({ video, resolve });
+function acquireSlot() {
+  return new Promise<() => void>((resolve) => {
+    const tryAcquire = () => {
+      if (attachedCount >= MAX_ATTACHED) {
+        attachWaiters.push(tryAcquire);
+        return;
+      }
+      attachedCount += 1;
+      let released = false;
+      resolve(() => {
+        if (released) return;
+        released = true;
+        attachedCount = Math.max(0, attachedCount - 1);
+        const next = attachWaiters.shift();
+        if (next) next();
+      });
+    };
+    tryAcquire();
   });
-}
-
-function releaseOwner(video: HTMLVideoElement) {
-  if (!owners.has(video)) return;
-  owners.delete(video);
-  const next = waiters.shift();
-  if (!next) return;
-  owners.add(next.video);
-  next.resolve();
 }
 
 export function ViewportVideo({
@@ -115,7 +121,6 @@ export function ViewportVideo({
     if (!entryReady || !video || typeof IntersectionObserver === 'undefined') return;
 
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-    const phone = () => isNarrowViewport();
 
     video.muted = true;
     video.defaultMuted = true;
@@ -124,30 +129,32 @@ export function ViewportVideo({
     video.setAttribute('webkit-playsinline', '');
     video.controls = reducedMotion.matches;
     video.preload = 'none';
+    // CSS poster only — HTML poster can flash the wrong bitmap while src swaps.
+    video.removeAttribute('poster');
 
     let inView = false;
-    let waiting = false;
-    let attached = false;
+    let waitingLoop = false;
     let cancelled = false;
-    let attachGeneration = 0;
+    let generation = 0;
+    let releaseSlot: (() => void) | undefined;
     let replayTimer: ReturnType<typeof setTimeout> | undefined;
-    let releaseTimer: ReturnType<typeof setTimeout> | undefined;
+    let detachTimer: ReturnType<typeof setTimeout> | undefined;
     let frameCallbackId: number | undefined;
 
     const hide = () => setReady(false);
 
-    const reveal = () => {
+    const revealIfValid = () => {
       if (cancelled) return;
       const want = wantRef.current;
-      if (!srcMatches(video, want)) return;
+      if (!isBoundTo(video, want)) return;
       if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+      if (video.videoWidth < 2 || video.videoHeight < 2) return;
       setReady(true);
     };
 
-    const armFrameReveal = () => {
+    const armReveal = () => {
       if (cancelled) return;
-      const want = wantRef.current;
-      if (!srcMatches(video, want)) return;
+      if (!isBoundTo(video, wantRef.current)) return;
       if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
 
       const rvfc = video as HTMLVideoElement & {
@@ -158,14 +165,21 @@ export function ViewportVideo({
         if (frameCallbackId !== undefined && typeof rvfc.cancelVideoFrameCallback === 'function') {
           rvfc.cancelVideoFrameCallback(frameCallbackId);
         }
+        const gen = generation;
         frameCallbackId = rvfc.requestVideoFrameCallback(() => {
           frameCallbackId = undefined;
-          // Re-check after the compositor has this element's frame.
-          reveal();
+          if (cancelled || gen !== generation) return;
+          revealIfValid();
         });
         return;
       }
-      requestAnimationFrame(() => requestAnimationFrame(reveal));
+      const gen = generation;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (cancelled || gen !== generation) return;
+          revealIfValid();
+        });
+      });
     };
 
     const freeze = () => {
@@ -173,10 +187,10 @@ export function ViewportVideo({
       if (!video.paused) video.pause();
     };
 
-    const clearSrc = () => {
-      attached = false;
+    const detach = () => {
       hide();
-      delete video.dataset.src;
+      freeze();
+      delete video.dataset.want;
       video.preload = 'none';
       video.removeAttribute('src');
       try {
@@ -184,113 +198,107 @@ export function ViewportVideo({
       } catch {
         /* ignore */
       }
-      releaseOwner(video);
+      releaseSlot?.();
+      releaseSlot = undefined;
     };
 
-    const attachNow = () => {
+    const attach = async () => {
       if (cancelled || !inView) return;
       const want = wantRef.current;
-      if (attached && video.dataset.src === want && srcMatches(video, want)) return;
-
-      // Drop any previous decoder state before binding a new URL.
-      hide();
-      if (attached || video.getAttribute('src')) {
-        delete video.dataset.src;
-        video.removeAttribute('src');
-        try {
-          video.load();
-        } catch {
-          /* ignore */
-        }
+      if (isBoundTo(video, want) && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        armReveal();
+        return;
       }
 
-      attached = true;
-      video.dataset.src = want;
-      video.preload = phone() ? 'metadata' : 'auto';
+      const gen = ++generation;
+      hide();
+
+      if (!releaseSlot) {
+        releaseSlot = await acquireSlot();
+      }
+      if (cancelled || gen !== generation || !inView) {
+        releaseSlot?.();
+        releaseSlot = undefined;
+        return;
+      }
+
+      // Hard reset before binding so Chrome cannot keep a previous bitmap.
+      video.removeAttribute('src');
+      try {
+        video.load();
+      } catch {
+        /* ignore */
+      }
+
+      video.dataset.want = want;
+      video.preload = isNarrowViewport() ? 'metadata' : 'auto';
       video.src = want;
-    };
-
-    const attach = () => {
-      if (releaseTimer) {
-        clearTimeout(releaseTimer);
-        releaseTimer = undefined;
+      try {
+        video.load();
+      } catch {
+        /* ignore */
       }
-      const want = wantRef.current;
-      if (attached && video.dataset.src === want && srcMatches(video, want)) return;
-
-      const generation = ++attachGeneration;
-      void claimOwner(video).then(() => {
-        if (cancelled || generation !== attachGeneration || !inView) {
-          releaseOwner(video);
-          return;
-        }
-        attachNow();
-      });
-    };
-
-    const releaseWhenAway = () => {
-      hide();
-      freeze();
-      attachGeneration += 1;
-      if (releaseTimer) clearTimeout(releaseTimer);
-      // Keep poster covering while decoder tears down.
-      releaseTimer = setTimeout(() => {
-        releaseTimer = undefined;
-        if (cancelled || inView) return;
-        clearSrc();
-      }, phone() ? 360 : 220);
     };
 
     const play = () => {
-      if (!inView || waiting || reducedMotion.matches || document.hidden) {
+      if (!inView || waitingLoop || reducedMotion.matches || document.hidden) {
         video.autoplay = false;
         return;
       }
-      attach();
-      video.autoplay = true;
-      if (video.paused) {
-        void video.play().catch((error: DOMException) => {
-          if (error.name !== 'AbortError') video.controls = true;
-        });
-      }
+      void attach().then(() => {
+        if (cancelled || !inView) return;
+        video.autoplay = true;
+        if (video.paused) {
+          void video.play().catch((error: DOMException) => {
+            if (error.name !== 'AbortError') video.controls = true;
+          });
+        }
+      });
     };
 
+    const leave = () => {
+      hide();
+      freeze();
+      generation += 1;
+      if (detachTimer) clearTimeout(detachTimer);
+      // Poster/mask covers while we tear down the decoder.
+      detachTimer = setTimeout(() => {
+        detachTimer = undefined;
+        if (cancelled || inView) return;
+        detach();
+      }, 200);
+    };
+
+    // Poster warm only — do not attach off-screen (that caused multi-decode scramble).
     const nearIo = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      if (poster) {
-        const img = new window.Image();
-        img.decoding = 'async';
-        img.src = poster;
-      }
-      // Warm attach only on desktop near-zone; phones wait for viewIo.
-      if (!phone()) attach();
-    }, {
-      rootMargin: phone() ? '120px 0px' : '200px 0px',
-      threshold: 0,
-    });
+      if (!entry.isIntersecting || !poster) return;
+      const img = new window.Image();
+      img.decoding = 'async';
+      img.src = poster;
+    }, { rootMargin: '240px 0px', threshold: 0 });
 
     const viewIo = new IntersectionObserver(([entry]) => {
       inView = entry.isIntersecting;
+      if (detachTimer) {
+        clearTimeout(detachTimer);
+        detachTimer = undefined;
+      }
       if (inView) play();
-      else releaseWhenAway();
+      else leave();
     }, {
-      rootMargin: phone() ? '24px 0px' : '80px 0px',
-      threshold: phone() ? 0.12 : 0.02,
+      rootMargin: isNarrowViewport() ? '32px 0px' : '64px 0px',
+      threshold: isNarrowViewport() ? 0.1 : 0.05,
     });
 
-    const onReady = () => {
-      armFrameReveal();
-      if (inView) play();
-    };
-
-    const onPlaying = () => armFrameReveal();
+    const onLoaded = () => armReveal();
+    const onPlaying = () => armReveal();
 
     const onEnded = () => {
       if (!loopDelayMs) return;
-      waiting = true;
+      waitingLoop = true;
       video.autoplay = false;
       replayTimer = setTimeout(() => {
-        waiting = false;
+        waitingLoop = false;
         video.currentTime = 0;
         play();
       }, loopDelayMs);
@@ -299,10 +307,10 @@ export function ViewportVideo({
     const onError = () => {
       if (
         mobile
-        && (video.currentSrc.includes('/mobile/') || wantRef.current.includes('/mobile/'))
+        && wantRef.current.includes('/mobile/')
         && stripQuery(wantRef.current) !== stripQuery(src)
       ) {
-        clearSrc();
+        detach();
         setActiveSrc(src);
       }
     };
@@ -315,8 +323,8 @@ export function ViewportVideo({
 
     nearIo.observe(video);
     viewIo.observe(video);
-    video.addEventListener('loadeddata', onReady);
-    video.addEventListener('canplay', onReady);
+    video.addEventListener('loadeddata', onLoaded);
+    video.addEventListener('canplay', onLoaded);
     video.addEventListener('playing', onPlaying);
     video.addEventListener('ended', onEnded);
     video.addEventListener('error', onError);
@@ -325,36 +333,40 @@ export function ViewportVideo({
 
     return () => {
       cancelled = true;
-      attachGeneration += 1;
+      generation += 1;
       if (replayTimer) clearTimeout(replayTimer);
-      if (releaseTimer) clearTimeout(releaseTimer);
+      if (detachTimer) clearTimeout(detachTimer);
       const rvfc = video as HTMLVideoElement & { cancelVideoFrameCallback?: (id: number) => void };
       if (frameCallbackId !== undefined && typeof rvfc.cancelVideoFrameCallback === 'function') {
         rvfc.cancelVideoFrameCallback(frameCallbackId);
       }
       nearIo.disconnect();
       viewIo.disconnect();
-      video.removeEventListener('loadeddata', onReady);
-      video.removeEventListener('canplay', onReady);
+      video.removeEventListener('loadeddata', onLoaded);
+      video.removeEventListener('canplay', onLoaded);
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('ended', onEnded);
       video.removeEventListener('error', onError);
       document.removeEventListener('visibilitychange', onVisibility);
       reducedMotion.removeEventListener('change', onVisibility);
-      freeze();
-      clearSrc();
+      detach();
     };
   }, [activeSrc, src, mobile, loopDelayMs, poster, entryReady]);
 
   return (
     <span className={`case-video${ready ? ' is-ready' : ''}${poster ? ' has-poster' : ''}`}>
-      {poster ? <span className="case-media-poster" style={{ backgroundImage: `url(${poster})` }} aria-hidden /> : null}
+      {poster ? (
+        <span
+          className="case-media-poster"
+          style={{ backgroundImage: `url(${poster})` }}
+          aria-hidden
+        />
+      ) : null}
+      {/* Stable node — do not key-remount; src is owned by the effect. */}
       <video
-        key={activeSrc}
         ref={ref}
         width={width}
         height={height}
-        poster={poster}
         muted
         loop={!loopDelayMs}
         playsInline
@@ -363,6 +375,8 @@ export function ViewportVideo({
         controlsList="nodownload nofullscreen"
         disablePictureInPicture
       />
+      {/* Hard cover until this slot's own frame is confirmed (Chrome-safe). */}
+      {!ready ? <span className="case-video-mask" aria-hidden /> : null}
     </span>
   );
 }

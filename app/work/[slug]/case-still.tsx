@@ -45,8 +45,14 @@ export function CaseStill({
         loading={priority ? 'eager' : 'lazy'}
         draggable={false}
         data-pin-nopin="true"
-        onLoad={markReady}
+        onLoad={(event) => {
+          const node = event.currentTarget;
+          // Ignore stale load events from a previous src.
+          if (node.currentSrc && !node.currentSrc.includes(src.split('?')[0].split('/').pop() || '')) return;
+          markReady();
+        }}
       />
+      {!ready ? <span className="case-video-mask" aria-hidden /> : null}
     </span>
   );
 }
