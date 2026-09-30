@@ -8,17 +8,15 @@ export const videoLoopDelays: Record<string, number> = {
 };
 
 /**
- * Justified-adapted for local large files + slow production CDN:
+ * Case video — anti-scramble rules (Web + mobile):
  *
- * Desktop: attach when near, keep src, pause off-screen.
- * Mobile (phones / slow CDN — this is where LAN vs Vercel diverges):
- * - Only ONE <video> may hold a src at a time (serial decoder)
- * - Attach only when actually in view (not a large near-margin)
- * - Hide with visibility until THIS element's first painted frame
- * - Release src when leaving view so the next slot cannot inherit a frame
- *
- * LAN feels fine because files arrive instantly; production (esp. CN → SFO)
- * keeps many downloads in flight and Safari briefly paints the wrong slot.
+ * 1. Never paint until THIS element has a verified first frame (visibility:hidden
+ *    until is-ready — opacity alone is not enough on Safari).
+ * 2. Cap concurrent attached <video src> globally (decoder frame bleed).
+ * 3. Attach only when in/near view; detach when leaving so the next slot cannot
+ *    inherit another clip's frame.
+ * 4. Reveal only after requestVideoFrameCallback (or double-rAF) AND currentSrc
+ *    filename matches the requested asset.
  */
 
 function isNarrowViewport() {
@@ -39,28 +37,41 @@ function pickSrc(src: string, mobileSrc: string, allowMobile: boolean) {
   return src;
 }
 
-/** Mobile: at most two elements may hold an attached video src (covers media-pair). */
-const MOBILE_MAX_OWNERS = 2;
-const mobileOwners = new Set<HTMLVideoElement>();
-const mobileWaiters: Array<{ video: HTMLVideoElement; resolve: () => void }> = [];
+function fileName(url: string) {
+  return stripQuery(url).split('/').pop() || '';
+}
 
-function claimMobileOwner(video: HTMLVideoElement) {
+function srcMatches(video: HTMLVideoElement, wantUrl: string) {
+  const want = fileName(wantUrl);
+  if (!want) return false;
+  if (video.dataset.src !== wantUrl) return false;
+  const current = video.currentSrc || video.getAttribute('src') || '';
+  if (!current) return false;
+  return current.includes(want);
+}
+
+/** Global attach pool — Safari bleeds frames across simultaneous decoders. */
+const MAX_OWNERS = 2;
+const owners = new Set<HTMLVideoElement>();
+const waiters: Array<{ video: HTMLVideoElement; resolve: () => void }> = [];
+
+function claimOwner(video: HTMLVideoElement) {
   return new Promise<void>((resolve) => {
-    if (mobileOwners.has(video) || mobileOwners.size < MOBILE_MAX_OWNERS) {
-      mobileOwners.add(video);
+    if (owners.has(video) || owners.size < MAX_OWNERS) {
+      owners.add(video);
       resolve();
       return;
     }
-    mobileWaiters.push({ video, resolve });
+    waiters.push({ video, resolve });
   });
 }
 
-function releaseMobileOwner(video: HTMLVideoElement) {
-  if (!mobileOwners.has(video)) return;
-  mobileOwners.delete(video);
-  const next = mobileWaiters.shift();
+function releaseOwner(video: HTMLVideoElement) {
+  if (!owners.has(video)) return;
+  owners.delete(video);
+  const next = waiters.shift();
   if (!next) return;
-  mobileOwners.add(next.video);
+  owners.add(next.video);
   next.resolve();
 }
 
@@ -84,6 +95,8 @@ export function ViewportVideo({
 
   const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, mobile));
   const [ready, setReady] = useState(false);
+  const wantRef = useRef(activeSrc);
+  wantRef.current = activeSrc;
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 800px)');
@@ -125,18 +138,18 @@ export function ViewportVideo({
 
     const reveal = () => {
       if (cancelled) return;
-      if (video.dataset.src !== activeSrc) return;
-      const current = video.currentSrc || video.src || '';
-      if (current) {
-        const want = stripQuery(activeSrc).split('/').pop();
-        if (want && !current.includes(want)) return;
-      }
+      const want = wantRef.current;
+      if (!srcMatches(video, want)) return;
+      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
       setReady(true);
     };
 
     const armFrameReveal = () => {
       if (cancelled) return;
+      const want = wantRef.current;
+      if (!srcMatches(video, want)) return;
       if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+
       const rvfc = video as HTMLVideoElement & {
         requestVideoFrameCallback?: (cb: () => void) => number;
         cancelVideoFrameCallback?: (id: number) => void;
@@ -147,6 +160,7 @@ export function ViewportVideo({
         }
         frameCallbackId = rvfc.requestVideoFrameCallback(() => {
           frameCallbackId = undefined;
+          // Re-check after the compositor has this element's frame.
           reveal();
         });
         return;
@@ -161,6 +175,7 @@ export function ViewportVideo({
 
     const clearSrc = () => {
       attached = false;
+      hide();
       delete video.dataset.src;
       video.preload = 'none';
       video.removeAttribute('src');
@@ -169,18 +184,30 @@ export function ViewportVideo({
       } catch {
         /* ignore */
       }
-      releaseMobileOwner(video);
+      releaseOwner(video);
     };
 
     const attachNow = () => {
       if (cancelled || !inView) return;
-      if (attached && video.dataset.src === activeSrc) return;
+      const want = wantRef.current;
+      if (attached && video.dataset.src === want && srcMatches(video, want)) return;
+
+      // Drop any previous decoder state before binding a new URL.
       hide();
+      if (attached || video.getAttribute('src')) {
+        delete video.dataset.src;
+        video.removeAttribute('src');
+        try {
+          video.load();
+        } catch {
+          /* ignore */
+        }
+      }
+
       attached = true;
-      video.dataset.src = activeSrc;
-      // metadata is enough to get a first frame; auto fights the CDN on phones.
+      video.dataset.src = want;
       video.preload = phone() ? 'metadata' : 'auto';
-      video.src = activeSrc;
+      video.src = want;
     };
 
     const attach = () => {
@@ -188,35 +215,30 @@ export function ViewportVideo({
         clearTimeout(releaseTimer);
         releaseTimer = undefined;
       }
-      if (attached && video.dataset.src === activeSrc) return;
-
-      if (!phone()) {
-        attachNow();
-        return;
-      }
+      const want = wantRef.current;
+      if (attached && video.dataset.src === want && srcMatches(video, want)) return;
 
       const generation = ++attachGeneration;
-      void claimMobileOwner(video).then(() => {
+      void claimOwner(video).then(() => {
         if (cancelled || generation !== attachGeneration || !inView) {
-          releaseMobileOwner(video);
+          releaseOwner(video);
           return;
         }
         attachNow();
       });
     };
 
-    const releaseIfPhone = () => {
-      if (!phone()) return;
+    const releaseWhenAway = () => {
       hide();
       freeze();
       attachGeneration += 1;
       if (releaseTimer) clearTimeout(releaseTimer);
-      // Poster must cover before we drop the decoder — longer on slow CDN.
+      // Keep poster covering while decoder tears down.
       releaseTimer = setTimeout(() => {
         releaseTimer = undefined;
         if (cancelled || inView) return;
         clearSrc();
-      }, 360);
+      }, phone() ? 360 : 220);
     };
 
     const play = () => {
@@ -233,34 +255,27 @@ export function ViewportVideo({
       }
     };
 
-    // Desktop: warm when near. Mobile: do NOT attach early — only viewIo attaches.
     const nearIo = new IntersectionObserver(([entry]) => {
-      if (phone()) {
-        // Warm poster only (cheap). Never touch video.src off-screen on phones.
-        if (entry.isIntersecting && poster) {
-          const img = new window.Image();
-          img.decoding = 'async';
-          img.src = poster;
-        }
-        return;
+      if (!entry.isIntersecting) return;
+      if (poster) {
+        const img = new window.Image();
+        img.decoding = 'async';
+        img.src = poster;
       }
-      if (entry.isIntersecting) attach();
+      // Warm attach only on desktop near-zone; phones wait for viewIo.
+      if (!phone()) attach();
     }, {
-      rootMargin: phone() ? '200px 0px' : '480px 0px',
+      rootMargin: phone() ? '120px 0px' : '200px 0px',
       threshold: 0,
     });
 
     const viewIo = new IntersectionObserver(([entry]) => {
       inView = entry.isIntersecting;
       if (inView) play();
-      else {
-        freeze();
-        releaseIfPhone();
-      }
+      else releaseWhenAway();
     }, {
-      // Tiny positive margin so a slot isn't dropped mid-viewport bounce.
-      rootMargin: phone() ? '40px 0px' : '0px',
-      threshold: phone() ? 0.15 : 0,
+      rootMargin: phone() ? '24px 0px' : '80px 0px',
+      threshold: phone() ? 0.12 : 0.02,
     });
 
     const onReady = () => {
@@ -284,10 +299,9 @@ export function ViewportVideo({
     const onError = () => {
       if (
         mobile
-        && (video.currentSrc.includes('/mobile/') || activeSrc.includes('/mobile/'))
-        && stripQuery(activeSrc) !== stripQuery(src)
+        && (video.currentSrc.includes('/mobile/') || wantRef.current.includes('/mobile/'))
+        && stripQuery(wantRef.current) !== stripQuery(src)
       ) {
-        hide();
         clearSrc();
         setActiveSrc(src);
       }
@@ -328,7 +342,6 @@ export function ViewportVideo({
       document.removeEventListener('visibilitychange', onVisibility);
       reducedMotion.removeEventListener('change', onVisibility);
       freeze();
-      hide();
       clearSrc();
     };
   }, [activeSrc, src, mobile, loopDelayMs, poster, entryReady]);
@@ -337,6 +350,7 @@ export function ViewportVideo({
     <span className={`case-video${ready ? ' is-ready' : ''}${poster ? ' has-poster' : ''}`}>
       {poster ? <span className="case-media-poster" style={{ backgroundImage: `url(${poster})` }} aria-hidden /> : null}
       <video
+        key={activeSrc}
         ref={ref}
         width={width}
         height={height}
