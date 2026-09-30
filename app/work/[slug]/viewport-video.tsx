@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useCaseEntryReady } from './case-entry-gate';
 
 export const videoLoopDelays: Record<string, number> = {
@@ -8,8 +8,8 @@ export const videoLoopDelays: Record<string, number> = {
 };
 
 /**
- * Case video — bind once, keep forever.
- * Eager slots start decoding under the entry gate; play only after the gate opens.
+ * Case video — never show pixels until THIS element's currentSrc matches
+ * the wanted file and a real frame exists. Solid gray until then.
  */
 
 function isSafari() {
@@ -18,7 +18,6 @@ function isSafari() {
   return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|Firefox|Android/i.test(ua);
 }
 
-/** Safari: one eager bind at a time. */
 let safariEagerTail: Promise<void> = Promise.resolve();
 function enqueueSafariEagerBind(task: () => Promise<void>) {
   const run = safariEagerTail.then(task, task);
@@ -95,14 +94,12 @@ export function ViewportVideo({
   height?: number;
   mobile?: boolean;
   poster?: string;
-  /** Case slot number — used to limit eager binds on phones. */
   slot?: number;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const loopDelayMs = Math.max(0, videoLoopDelays[stripQuery(src)] ?? 0);
   const entryReady = useCaseEntryReady();
   const mobileSrc = withQuery(src.replace(/\/([^/?]+)(\?.*)?$/, '/mobile/$1'), src);
-  // Phones: only pre-bind the first couple; desktop can warm a short runway.
   const eager = typeof slot === 'number' && slot >= 1 && slot <= (isNarrowViewport() ? 2 : 6);
 
   const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, mobile));
@@ -118,7 +115,7 @@ export function ViewportVideo({
     return () => mq.removeEventListener('change', sync);
   }, [src, mobile, mobileSrc]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setReady(false);
   }, [activeSrc]);
 
@@ -145,14 +142,18 @@ export function ViewportVideo({
     let frameCallbackId: number | undefined;
     let replayTimer: ReturnType<typeof setTimeout> | undefined;
     let revealFallback: ReturnType<typeof setTimeout> | undefined;
+    let bindGeneration = 0;
 
     const hide = () => setReady(false);
 
     const revealIfValid = () => {
       if (cancelled) return;
-      if (!isBoundTo(video, wantRef.current)) return;
+      const want = wantRef.current;
+      if (!isBoundTo(video, want)) return;
       if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
       if (video.videoWidth < 2 || video.videoHeight < 2) return;
+      // Reject paints that still belong to a previous bind generation.
+      if (Number(video.dataset.bindGen || '0') !== bindGeneration) return;
       setReady(true);
     };
 
@@ -175,8 +176,9 @@ export function ViewportVideo({
           frameCallbackId = undefined;
           revealIfValid();
         });
+        // Only as last resort after a real loadeddata — never early.
         if (revealFallback) clearTimeout(revealFallback);
-        revealFallback = setTimeout(revealIfValid, 120);
+        revealFallback = setTimeout(revealIfValid, 280);
         return;
       }
       requestAnimationFrame(() => requestAnimationFrame(revealIfValid));
@@ -190,9 +192,20 @@ export function ViewportVideo({
     const ensureBound = () => {
       const want = wantRef.current;
       if (bound && isBoundTo(video, want)) return;
+
       hide();
       bound = true;
+      bindGeneration += 1;
+      video.dataset.bindGen = String(bindGeneration);
       video.dataset.want = want;
+
+      // Force a blank pipeline so Safari/Chrome cannot keep a foreign frame.
+      try {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      } catch { /* ignore */ }
+
       video.preload = 'auto';
       video.src = want;
       try {
@@ -251,14 +264,13 @@ export function ViewportVideo({
     };
 
     const onError = () => {
-      // Desktop AE exports can exceed Safari decode limits — fall back to mobile MP4.
+      hide();
       if (
         mobile
         && !wantRef.current.includes('/mobile/')
         && stripQuery(mobileSrc) !== stripQuery(wantRef.current)
       ) {
         bound = false;
-        hide();
         setActiveSrc(mobileSrc);
         return;
       }
@@ -268,7 +280,6 @@ export function ViewportVideo({
         && stripQuery(wantRef.current) !== stripQuery(src)
       ) {
         bound = false;
-        hide();
         setActiveSrc(src);
       }
     };
@@ -295,12 +306,11 @@ export function ViewportVideo({
         img.decoding = 'async';
         img.src = poster;
       }
-      // Mobile Chrome also has a small decode pool — serialize eager binds everywhere.
       if (isSafari() || isNarrowViewport()) {
         void enqueueSafariEagerBind(() => {
           if (!cancelled) ensureBound();
           return new Promise<void>((resolve) => {
-            if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+            if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && isBoundTo(video, wantRef.current)) {
               resolve();
               return;
             }

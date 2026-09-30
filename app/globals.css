@@ -67,12 +67,13 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .placeholder.trim-edge>video,.placeholder.trim-edge .case-video>video{transform:scale(1.005)}
 .case-still,.case-video{position:relative;overflow:hidden;background:#121212}
 .case-media-lqip,.case-media-poster{position:absolute;inset:0;z-index:0;background-color:#121212;background-size:cover;background-position:center;pointer-events:none}
-.case-media-lqip{inset:-6%;filter:blur(16px);transform:scale(1.06);opacity:1;transition:opacity .5s cubic-bezier(.4,0,.2,1)}
-.case-media-poster{opacity:1;transition:opacity .5s cubic-bezier(.4,0,.2,1)}
-.case-video-mask{position:absolute;inset:0;z-index:2;background:#121212;opacity:1;pointer-events:none;transition:opacity .5s cubic-bezier(.4,0,.2,1)}
+.case-media-lqip{inset:-6%;filter:blur(16px);transform:scale(1.06);opacity:1;transition:opacity .45s cubic-bezier(.4,0,.2,1)}
+.case-media-poster{opacity:1;transition:opacity .45s cubic-bezier(.4,0,.2,1)}
+/* Solid cover until THIS asset is verified — no translucent cross-fade of a foreign frame. */
+.case-video-mask{position:absolute;inset:0;z-index:2;background:#121212;opacity:1;pointer-events:none;transition:none}
 .case-still.is-ready .case-video-mask,.case-video.is-ready .case-video-mask{opacity:0}
-.case-still img,.case-video>video{position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .5s cubic-bezier(.4,0,.2,1)}
-.case-still.is-ready img,.case-video.is-ready>video{opacity:1}
+.case-still img,.case-video>video{position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:cover;opacity:0;visibility:hidden;transition:opacity .45s cubic-bezier(.4,0,.2,1)}
+.case-still.is-ready img,.case-video.is-ready>video{opacity:1;visibility:visible}
 .case-still.is-ready .case-media-lqip,.case-video.is-ready .case-media-poster{opacity:0}
 @media(max-width:800px){
   .case-media-lqip{display:none}
