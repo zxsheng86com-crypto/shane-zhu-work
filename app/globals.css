@@ -309,7 +309,7 @@ html[data-lang="zh"] .case-text>.case-desc>.lang-zh{display:block!important}
 .about-intro h1{grid-column:2/-1;margin:0;font-size:clamp(32px,3.2vw,64px);font-weight:400;line-height:1.2;letter-spacing:-.045em}
 .about-portrait{grid-column:1/-1;margin:120px 0 0}
 .about-portrait-image{position:relative;width:15%;min-width:150px;aspect-ratio:1;overflow:hidden;background:var(--panel)}
-.about-portrait-image img{object-fit:cover;object-position:55% center;filter:grayscale(1)}
+.about-portrait-image img{display:block;width:100%;height:100%;object-fit:cover;object-position:55% center;filter:grayscale(1)}
 .about-portrait figcaption{margin-top:12px;font-size:12px;line-height:16px}
 .about-reference-table-section{position:relative;align-items:start;margin-top:120px}
 .about-reference-table{grid-column:2/-1;min-width:0}
@@ -421,6 +421,7 @@ body:has(.cf-home){background:#000;color:#fff;color-scheme:dark}
 .cf-intro-loader.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
 .cf-loader-bar{position:relative;overflow:hidden;width:min(160px,28vw);height:1px;background:rgba(255,255,255,.12)}
 .cf-loader-bar-fill{position:absolute;inset:0;display:block;background:#7d7d7d;transform:scaleX(0);transform-origin:left center;will-change:transform;transition:transform .18s linear}
+.case-entry-loader .cf-loader-bar-fill{transition:none}
 @media(prefers-reduced-motion:reduce){
   .cf-intro-loader,.cf-loader-bar-fill{transition:none}
 }

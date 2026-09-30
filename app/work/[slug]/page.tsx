@@ -11,7 +11,7 @@ import type { CSSProperties } from 'react';
 import mediaDimensions from '../../media-dimensions.json';
 import { Localized } from '../../localized';
 import { CaseProjectPrefetch } from '../../project-prefetch';
-import { shouldEagerBindCaseSlot, shouldPriorityCaseSlot, isCaseEntrySlot } from '../../project-opening';
+import { shouldEagerBindCaseSlot, shouldPriorityCaseSlot } from '../../project-opening';
 import { CaseEntryGate } from './case-entry-gate';
 
 export function generateStaticParams() {
@@ -94,8 +94,6 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
           mobile={useMobile}
           poster={poster}
           eager={shouldEagerBindCaseSlot(slot)}
-          entrySlug={isCaseEntrySlot(slot) ? projectSlug : undefined}
-          entrySlot={isCaseEntrySlot(slot) ? slot : undefined}
         />
       : <CaseStill key={`${projectSlug}-${pad2(slot)}-still`} src={mediaSrc} lqip={lqip} priority={shouldPriorityCaseSlot(slot)} />)}
     {showSlotNumber && <strong className="slot-number">{String(number).padStart(2, '0')}</strong>}

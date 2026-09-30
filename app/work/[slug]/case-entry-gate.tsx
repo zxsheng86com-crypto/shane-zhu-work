@@ -1,8 +1,7 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { beginCaseEntry } from '../../case-entry-progress';
-import { caseEntryUnitIds, loadCaseEntryPack, warmCaseLookahead } from '../../project-opening';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { loadCaseEntryPack, warmCaseLookahead } from '../../project-opening';
 
 const CaseEntryContext = createContext(true);
 
@@ -11,45 +10,53 @@ export function useCaseEntryReady() {
   return useContext(CaseEntryContext);
 }
 
-const ENTRY_TIMEOUT_MS = 45000;
+const ENTRY_TIMEOUT_MS = 20000;
 
 /**
  * Black progress gate on case entry.
- * Finishes slots 01–06 with real decode progress (images here, videos in
- * ViewportVideo — Safari needs a real media element), then warms 07–08.
+ * Real load underneath; displayed bar eases toward the target so it never
+ * jumps then stalls.
  */
 export function CaseEntryGate({ slug, children }: { slug: string; children: ReactNode }) {
-  const [progress, setProgress] = useState(0);
+  const [display, setDisplay] = useState(2);
   const [ready, setReady] = useState(false);
-
-  // Start the progress bus during render so child players can report
-  // before this component's useEffect runs.
-  useState(() => {
-    if (typeof window === 'undefined') return false;
-    beginCaseEntry(slug, caseEntryUnitIds(slug));
-    return true;
-  });
+  const targetRef = useRef(2);
+  const readyRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
     let finishTimer = 0;
-    const dispose = beginCaseEntry(slug, caseEntryUnitIds(slug));
+    let raf = 0;
+
+    const tick = () => {
+      setDisplay((prev) => {
+        const target = targetRef.current;
+        const gap = target - prev;
+        if (Math.abs(gap) < 0.15) return target;
+        // Ease out — faster while catching a big jump, slower near the end.
+        return prev + gap * (readyRef.current ? 0.18 : 0.1);
+      });
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
 
     const finish = () => {
-      if (cancelled) return;
-      setProgress(100);
+      if (cancelled || readyRef.current) return;
+      readyRef.current = true;
+      targetRef.current = 100;
       finishTimer = window.setTimeout(() => {
         if (!cancelled) {
           setReady(true);
           void warmCaseLookahead(slug);
         }
-      }, 180);
+      }, 420);
     };
 
     const safety = window.setTimeout(finish, ENTRY_TIMEOUT_MS);
 
     void loadCaseEntryPack(slug, (value: number) => {
-      if (!cancelled) setProgress((prev) => (value > prev ? value : prev));
+      if (cancelled) return;
+      targetRef.current = Math.max(targetRef.current, Math.min(99, value));
     })
       .then(finish)
       .catch(finish);
@@ -58,7 +65,7 @@ export function CaseEntryGate({ slug, children }: { slug: string; children: Reac
       cancelled = true;
       window.clearTimeout(safety);
       window.clearTimeout(finishTimer);
-      dispose();
+      cancelAnimationFrame(raf);
     };
   }, [slug]);
 
@@ -82,10 +89,10 @@ export function CaseEntryGate({ slug, children }: { slug: string; children: Reac
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={progress}
+          aria-valuenow={Math.round(display)}
           aria-valuetext="Loading"
         >
-          <i className="cf-loader-bar-fill" style={{ transform: `scaleX(${Math.max(progress, 2) / 100})` }} />
+          <i className="cf-loader-bar-fill" style={{ transform: `scaleX(${Math.max(display, 2) / 100})` }} />
         </div>
       </div>
       {children}

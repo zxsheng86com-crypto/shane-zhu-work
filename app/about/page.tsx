@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { Header } from '../site';
 import { Localized } from '../localized';
 import { HomeProjectPrefetch } from '../project-prefetch';
@@ -53,7 +52,17 @@ export default function About() {
         <div className="about-reference-label"><Localized en="Introduction" zh="介绍" /></div>
         <h1><Localized en="I'm Shane Zhu, a UI designer with 8 years of experience focused on intelligent hardware GUI and cross-device mobile experiences. I have worked at Tencent, CVTE and DJI. I have led interface design for products across categories, including flight-control systems, robot-vacuum apps and E-bike displays, spanning device and mobile experiences while staying involved from concept exploration through design delivery and product release." zh="我是朱晓生。我有 8 年 UI 设计经验，专注智能硬件 GUI 与移动端跨端体验，先后任职腾讯、视源与大疆。主导过飞控系统、扫地机器人 App、E-bike 中控屏等多品类产品的界面设计，覆盖设备端与移动端体验，并持续参与项目从概念探索到设计落地与产品发布。" /></h1>
         <figure className="about-portrait">
-          <div className="about-portrait-image"><Image src="/media/shane-zhu-avatar.jpg?v=20260930-jpg" alt="Shane Zhu" fill priority sizes="(max-width: 800px) 45vw, 15vw" unoptimized /></div>
+          <div className="about-portrait-image">
+            {/* ponytail: plain img — Next/Image + progressive JPEG was blanking on Safari */}
+            <img
+              src="/media/shane-zhu-avatar.jpg?v=20260930-baseline"
+              alt="Shane Zhu"
+              width={1593}
+              height={1049}
+              decoding="async"
+              fetchPriority="high"
+            />
+          </div>
           <figcaption><Localized en="Shane Zhu" zh="朱晓生" /><br /><Localized en="Senior UI Designer · Shenzhen, CN" zh="高级 UI 设计师 · 中国深圳" /></figcaption>
         </figure>
       </section>

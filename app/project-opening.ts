@@ -20,7 +20,7 @@ export const projectChain = [
 
 export type ProjectSlug = (typeof projectChain)[number];
 
-/** How many media slots the entry progress gate must finish. */
+/** How many media slots the entry progress gate must finish (stills + posters). */
 export const CASE_ENTRY_SLOTS = 6;
 /** Extra slots to warm once the page is open (while viewing the top). */
 export const CASE_LOOKAHEAD_SLOTS = 2;
@@ -30,7 +30,6 @@ type CaseCatalog = {
   href: string;
   folder: string;
   videoSlots: ReadonlySet<number>;
-  /** Cache-bust query matching Placeholder in page.tsx */
   version: string;
   maxSlot: number;
 };
@@ -126,7 +125,6 @@ export function caseMediaRange(slug: string, fromSlot: number, toSlot: number): 
   return items;
 }
 
-/** Home/browse light pack: first entry stills + posters (no full MP4 bodies). */
 function packFromCatalog(catalog: CaseCatalog): OpeningPack {
   const images: string[] = [];
   const videos: string[] = [];
@@ -192,7 +190,6 @@ function warmImage(url: string) {
   });
 }
 
-/** Fetch into HTTP cache only — never a hidden <video>. Abort on scroll. */
 async function warmVideo(url: string) {
   try {
     const response = await fetch(url, {
@@ -203,7 +200,7 @@ async function warmVideo(url: string) {
     if (!response.ok) return;
     await response.arrayBuffer();
   } catch {
-    // Abort / network — fine; player path still works.
+    /* abort / network */
   }
 }
 
@@ -234,7 +231,6 @@ async function warmUrl(url: string, kind: 'image' | 'video' | 'poster') {
   }
 }
 
-/** Prefetch RSC/shell + opening media for one project. Safe to call repeatedly. */
 export function warmOpeningPack(slug: string, prefetchRoute?: (href: string) => void) {
   if (!isProjectSlug(slug)) return Promise.resolve();
   if (!networkAllowsPrefetch()) return Promise.resolve();
@@ -244,7 +240,6 @@ export function warmOpeningPack(slug: string, prefetchRoute?: (href: string) => 
   const pack = openingPacks[slug];
   const task = (async () => {
     prefetchRoute?.(pack.href);
-    // Justified-style: warm light stand-ins first (poster / still), not full MP4 bodies.
     for (const poster of pack.posters) await warmUrl(poster, 'poster');
     for (const image of pack.images) await warmUrl(image, 'image');
   })().finally(() => {
@@ -255,7 +250,6 @@ export function warmOpeningPack(slug: string, prefetchRoute?: (href: string) => 
   return task;
 }
 
-/** Idle background: walk the project chain and warm every opening pack in order. */
 export async function warmOpeningChain(prefetchRoute?: (href: string) => void, fromSlug?: string) {
   const start = fromSlug ? projectChain.indexOf(fromSlug as ProjectSlug) : 0;
   const offset = start < 0 ? 0 : start;
@@ -282,7 +276,6 @@ function stripQuery(url: string) {
   return url.split('?')[0];
 }
 
-/** Prefer /mobile/ sibling when the viewport is phone-sized. */
 function entryVideoUrl(desktopUrl: string) {
   if (typeof window === 'undefined') return desktopUrl;
   if (!window.matchMedia('(max-width: 800px)').matches) return desktopUrl;
@@ -309,77 +302,48 @@ function loadImageProgress(url: string, onShare: (ratio: number) => void) {
   });
 }
 
-type ProgressUnit = { kind: 'image' | 'video' | 'poster'; url: string; slot: number };
-
-function entryUnits(slug: ProjectSlug): ProgressUnit[] {
-  const items = caseMediaRange(slug, 1, CASE_ENTRY_SLOTS);
-  const units: ProgressUnit[] = [];
-  for (const item of items) {
-    if (item.kind === 'video') {
-      if (item.poster) {
-        units.push({ kind: 'poster', url: item.poster, slot: item.slot });
-      }
-      units.push({ kind: 'video', url: entryVideoUrl(item.url), slot: item.slot });
-    } else {
-      units.push({ kind: 'image', url: item.url, slot: item.slot });
-    }
-  }
-  return units;
-}
-
-export function caseEntryUnitIds(slug: string) {
-  if (!isProjectSlug(slug)) return [] as string[];
-  return entryUnits(slug).map((unit) => `${slug}:${unit.kind}:${String(unit.slot).padStart(2, '0')}`);
-}
-
 /**
- * Case-entry gate: decode stills/posters here; entry videos decode in ViewportVideo
- * (Safari will not reuse fetch() bytes for <video>).
+ * Entry gate loads stills + video posters for slots 01–06 only.
+ * Full MP4 decode stays on the real <video> players (eager bind) so the
+ * bar does not jump to ~75% then freeze on a 17MB Safari decode.
  */
-export async function loadCaseEntryPack(
-  slug: string,
-  onProgress?: (value: number) => void,
-) {
+export async function loadCaseEntryPack(slug: string, onProgress?: (value: number) => void) {
   if (!isProjectSlug(slug)) {
     onProgress?.(100);
     return;
   }
 
-  const { beginCaseEntry, reportCaseEntryShare, subscribeCaseEntry, waitCaseEntry } =
-    await import('./case-entry-progress');
-
-  const units = entryUnits(slug);
-  const ids = caseEntryUnitIds(slug);
-  beginCaseEntry(slug, ids);
-  const unsubscribe = subscribeCaseEntry(slug, (value) => {
-    onProgress?.(Math.min(99, value));
-  });
-
-  try {
-    const imageUnits = units.filter((unit) => unit.kind !== 'video');
-    await Promise.all(
-      imageUnits.map(async (unit) => {
-        const id = `${slug}:${unit.kind}:${String(unit.slot).padStart(2, '0')}`;
-        await loadImageProgress(unit.url, (ratio) => {
-          reportCaseEntryShare(slug, id, ratio);
-        });
-      }),
-    );
-
-    // Videos are reported by eager ViewportVideo binds. Wait until they hit 1
-    // (or safety timeout — large first clips on Safari need headroom).
-    await waitCaseEntry(slug, 45000);
-    onProgress?.(100);
-  } finally {
-    unsubscribe();
+  const items = caseMediaRange(slug, 1, CASE_ENTRY_SLOTS);
+  const urls: string[] = [];
+  for (const item of items) {
+    if (item.kind === 'video') {
+      if (item.poster) urls.push(item.poster);
+    } else {
+      urls.push(item.url);
+    }
   }
+
+  if (!urls.length) {
+    onProgress?.(100);
+    return;
+  }
+
+  const shares = new Array(urls.length).fill(0);
+  const report = () => {
+    const sum = shares.reduce((a, b) => a + b, 0);
+    onProgress?.(Math.max(0, Math.min(99, Math.round((sum / urls.length) * 100))));
+  };
+
+  // Sequential image decode so progress walks forward instead of finishing in one burst.
+  for (let index = 0; index < urls.length; index += 1) {
+    await loadImageProgress(urls[index], (ratio) => {
+      shares[index] = ratio;
+      report();
+    });
+  }
+  onProgress?.(100);
 }
 
-/**
- * After the gate opens: warm slots 07–08 into HTTP cache while the user
- * is still looking at the first frames. Videos stay attached once the
- * player binds them (see ViewportVideo keep-alive).
- */
 export function warmCaseLookahead(slug: string) {
   if (!isProjectSlug(slug)) return Promise.resolve();
   const existing = lookaheadWarming.get(slug);
@@ -408,17 +372,10 @@ export function warmCaseLookahead(slug: string) {
   return task;
 }
 
-/** Slots that bind during/after entry (01–08). Videos in 01–06 report into the gate. */
 export function shouldEagerBindCaseSlot(slot: number) {
   return slot >= 1 && slot <= CASE_ENTRY_SLOTS + CASE_LOOKAHEAD_SLOTS;
 }
 
-/** True for the entry gate window (01–06) — must decode before the black bar lifts. */
-export function isCaseEntrySlot(slot: number) {
-  return slot >= 1 && slot <= CASE_ENTRY_SLOTS;
-}
-
-/** Stills in the entry + lookahead window should decode eagerly. */
 export function shouldPriorityCaseSlot(slot: number) {
   return slot >= 1 && slot <= CASE_ENTRY_SLOTS + CASE_LOOKAHEAD_SLOTS;
 }

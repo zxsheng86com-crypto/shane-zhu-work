@@ -1,11 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import {
-  enqueueCaseVideoBind,
-  entryUnitId,
-  reportCaseEntryShare,
-} from '../../case-entry-progress';
 import { useCaseEntryReady } from './case-entry-gate';
 
 export const videoLoopDelays: Record<string, number> = {
@@ -13,10 +8,8 @@ export const videoLoopDelays: Record<string, number> = {
 };
 
 /**
- * Case video — load once, keep forever on this page.
- *
- * Entry slots (01–06) bind during the black gate via real <video> decode
- * (Safari cannot reuse fetch() for media). Off-screen = pause only.
+ * Case video — bind once, keep forever.
+ * Eager slots start decoding under the entry gate; play only after the gate opens.
  */
 
 function isNarrowViewport() {
@@ -55,28 +48,21 @@ function isBoundTo(video: HTMLVideoElement, wantUrl: string) {
   return curPath === wantPath || curPath.endsWith(wantPath);
 }
 
-/** Safari often needs a tiny seek before the first frame is paintable. */
 function nudgeFirstFrame(video: HTMLVideoElement) {
   try {
-    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
-    if (!video.paused) return;
+    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.paused) return;
     const from = video.currentTime;
-    const probe = from > 0.05 ? from : Math.min(0.08, Math.max(0.001, (video.duration || 1) * 0.001));
-    video.currentTime = probe;
+    video.currentTime = from > 0.05 ? from : Math.min(0.08, Math.max(0.001, (video.duration || 1) * 0.001));
     if (from === 0) {
       const restore = () => {
         try {
           if (video.currentTime !== 0) video.currentTime = 0;
-        } catch {
-          /* ignore */
-        }
+        } catch { /* ignore */ }
         video.removeEventListener('seeked', restore);
       };
       video.addEventListener('seeked', restore);
     }
-  } catch {
-    /* ignore */
-  }
+  } catch { /* ignore */ }
 }
 
 export function ViewportVideo({
@@ -86,29 +72,18 @@ export function ViewportVideo({
   mobile = false,
   poster,
   eager = false,
-  entrySlug,
-  entrySlot,
 }: {
   src: string;
   width?: number;
   height?: number;
   mobile?: boolean;
   poster?: string;
-  /** Bind early (slots 01–08). */
   eager?: boolean;
-  /** When set with entrySlot ≤ 6, this player feeds the entry progress gate. */
-  entrySlug?: string;
-  entrySlot?: number;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const loopDelayMs = Math.max(0, videoLoopDelays[stripQuery(src)] ?? 0);
   const entryReady = useCaseEntryReady();
   const mobileSrc = withQuery(src.replace(/\/([^/?]+)(\?.*)?$/, '/mobile/$1'), src);
-  const feedsEntry =
-    Boolean(entrySlug)
-    && typeof entrySlot === 'number'
-    && entrySlot >= 1
-    && entrySlot <= 6;
 
   const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, mobile));
   const [ready, setReady] = useState(false);
@@ -129,9 +104,8 @@ export function ViewportVideo({
 
   useEffect(() => {
     const video = ref.current;
-    // Entry/eager slots bind even while the gate is up; others wait for entryReady.
     if (!video || typeof IntersectionObserver === 'undefined') return;
-    if (!entryReady && !eager && !feedsEntry) return;
+    if (!entryReady && !eager) return;
 
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -151,25 +125,14 @@ export function ViewportVideo({
     let frameCallbackId: number | undefined;
     let replayTimer: ReturnType<typeof setTimeout> | undefined;
     let revealFallback: ReturnType<typeof setTimeout> | undefined;
-    const entryId =
-      feedsEntry && entrySlug && entrySlot
-        ? entryUnitId(entrySlug, entrySlot, 'video')
-        : null;
 
     const hide = () => setReady(false);
 
-    const reportEntry = (ratio: number) => {
-      if (!entrySlug || !entryId) return;
-      reportCaseEntryShare(entrySlug, entryId, ratio);
-    };
-
     const revealIfValid = () => {
       if (cancelled) return;
-      const want = wantRef.current;
-      if (!isBoundTo(video, want)) return;
+      if (!isBoundTo(video, wantRef.current)) return;
       if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
       if (video.videoWidth < 2 || video.videoHeight < 2) return;
-      reportEntry(1);
       setReady(true);
     };
 
@@ -192,7 +155,6 @@ export function ViewportVideo({
           frameCallbackId = undefined;
           revealIfValid();
         });
-        // Safari may never fire RVFC while paused — don't hang the gray mask.
         if (revealFallback) clearTimeout(revealFallback);
         revealFallback = setTimeout(revealIfValid, 120);
         return;
@@ -208,7 +170,6 @@ export function ViewportVideo({
     const ensureBound = () => {
       const want = wantRef.current;
       if (bound && isBoundTo(video, want)) return;
-
       hide();
       bound = true;
       video.dataset.want = want;
@@ -216,9 +177,7 @@ export function ViewportVideo({
       video.src = want;
       try {
         video.load();
-      } catch {
-        /* ignore */
-      }
+      } catch { /* ignore */ }
     };
 
     const play = () => {
@@ -258,23 +217,8 @@ export function ViewportVideo({
       threshold: 0.05,
     });
 
-    const onProgress = () => {
-      if (!entryId || !isBoundTo(video, wantRef.current)) return;
-      try {
-        if (video.buffered.length > 0 && video.duration > 0) {
-          reportEntry(Math.min(0.99, video.buffered.end(video.buffered.length - 1) / video.duration));
-        }
-      } catch {
-        /* ignore */
-      }
-    };
-
-    const onLoaded = () => {
-      onProgress();
-      armReveal();
-    };
+    const onLoaded = () => armReveal();
     const onPlaying = () => armReveal();
-
     const onEnded = () => {
       if (!loopDelayMs) return;
       waitingLoop = true;
@@ -295,10 +239,7 @@ export function ViewportVideo({
         bound = false;
         hide();
         setActiveSrc(src);
-        return;
       }
-      // Don't block the entry gate forever on a dead file.
-      reportEntry(1);
     };
 
     const onVisibility = () => {
@@ -311,41 +252,19 @@ export function ViewportVideo({
     viewIo.observe(video);
     video.addEventListener('loadeddata', onLoaded);
     video.addEventListener('canplay', onLoaded);
-    video.addEventListener('progress', onProgress);
     video.addEventListener('playing', onPlaying);
     video.addEventListener('ended', onEnded);
     video.addEventListener('error', onError);
     document.addEventListener('visibilitychange', onVisibility);
     reducedMotion.addEventListener('change', onVisibility);
 
-    const shouldBindNow = eager || feedsEntry;
-    if (shouldBindNow) {
+    if (eager) {
       if (poster) {
         const img = new window.Image();
         img.decoding = 'async';
         img.src = poster;
       }
-      void enqueueCaseVideoBind(async () => {
-        if (cancelled) return;
-        ensureBound();
-        // Give this clip time to reach a frame before the next eager bind.
-        await new Promise<void>((resolve) => {
-          if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 1) {
-            reportEntry(1);
-            resolve();
-            return;
-          }
-          const done = () => {
-            video.removeEventListener('loadeddata', done);
-            video.removeEventListener('error', done);
-            window.clearTimeout(timer);
-            resolve();
-          };
-          const timer = window.setTimeout(done, 12000);
-          video.addEventListener('loadeddata', done);
-          video.addEventListener('error', done);
-        });
-      });
+      ensureBound();
     }
 
     return () => {
@@ -360,7 +279,6 @@ export function ViewportVideo({
       viewIo.disconnect();
       video.removeEventListener('loadeddata', onLoaded);
       video.removeEventListener('canplay', onLoaded);
-      video.removeEventListener('progress', onProgress);
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('ended', onEnded);
       video.removeEventListener('error', onError);
@@ -368,7 +286,7 @@ export function ViewportVideo({
       reducedMotion.removeEventListener('change', onVisibility);
       freeze();
     };
-  }, [activeSrc, src, mobile, loopDelayMs, poster, entryReady, eager, feedsEntry, entrySlug, entrySlot]);
+  }, [activeSrc, src, mobile, loopDelayMs, poster, entryReady, eager]);
 
   return (
     <span className={`case-video${ready ? ' is-ready' : ''}${poster ? ' has-poster' : ''}`}>
