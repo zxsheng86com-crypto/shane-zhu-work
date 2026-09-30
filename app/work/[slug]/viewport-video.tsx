@@ -8,11 +8,11 @@ export const videoLoopDelays: Record<string, number> = {
 
 /**
  * Justified-adapted for local large files:
- * - Attach src when near (no global queue)
- * - Keep src after attach on mobile AND desktop (pause = freeze frame)
- * - Never detach on scroll — remounting caused mobile scramble / wrong frames
- * - preload=metadata; play/pause from intersection only
- * - Sharp poster under video until first frame fades in
+ * - Attach src when near; on mobile, release when far (frees decoder)
+ * - Never reveal the <video> until THIS element's first painted frame
+ *   (iOS Safari otherwise briefly paints another slot's frame → "错位")
+ * - Poster stays fully opaque until that frame is confirmed
+ * - play/pause from intersection only
  */
 
 function isNarrowViewport() {
@@ -82,19 +82,95 @@ export function ViewportVideo({
     let inView = false;
     let waiting = false;
     let attached = false;
+    let cancelled = false;
     let replayTimer: ReturnType<typeof setTimeout> | undefined;
+    let releaseTimer: ReturnType<typeof setTimeout> | undefined;
+    let frameCallbackId: number | undefined;
+
+    const hide = () => {
+      setReady(false);
+    };
+
+    const reveal = () => {
+      if (cancelled) return;
+      // Only reveal if this element still owns the expected source.
+      if (video.dataset.src !== activeSrc) return;
+      const current = video.currentSrc || video.src || '';
+      if (current) {
+        const want = stripQuery(activeSrc).split('/').pop();
+        if (want && !current.includes(want)) return;
+      }
+      setReady(true);
+    };
+
+    /** Wait for a real painted frame of THIS video — not just loadeddata. */
+    const armFrameReveal = () => {
+      if (cancelled) return;
+      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+      const rvfc = (
+        video as HTMLVideoElement & {
+          requestVideoFrameCallback?: (cb: () => void) => number;
+          cancelVideoFrameCallback?: (id: number) => void;
+        }
+      );
+      if (typeof rvfc.requestVideoFrameCallback === 'function') {
+        if (frameCallbackId !== undefined && typeof rvfc.cancelVideoFrameCallback === 'function') {
+          rvfc.cancelVideoFrameCallback(frameCallbackId);
+        }
+        frameCallbackId = rvfc.requestVideoFrameCallback(() => {
+          frameCallbackId = undefined;
+          reveal();
+        });
+        return;
+      }
+      // Fallback: two rAFs after we know data exists.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(reveal);
+      });
+    };
 
     const freeze = () => {
       video.autoplay = false;
       if (!video.paused) video.pause();
     };
 
+    const clearSrc = () => {
+      attached = false;
+      delete video.dataset.src;
+      video.preload = 'none';
+      video.removeAttribute('src');
+      try {
+        video.load();
+      } catch {
+        /* ignore */
+      }
+    };
+
     const attach = () => {
+      if (releaseTimer) {
+        clearTimeout(releaseTimer);
+        releaseTimer = undefined;
+      }
       if (attached && video.dataset.src === activeSrc) return;
+      // Hide BEFORE swapping src so Safari never paints a borrowed frame.
+      hide();
       attached = true;
       video.dataset.src = activeSrc;
-      video.preload = 'metadata';
+      video.preload = 'auto';
       video.src = activeSrc;
+    };
+
+    const releaseMobile = () => {
+      if (!isNarrowViewport()) return;
+      hide();
+      freeze();
+      // Let poster reclaim the surface before dropping the decoder.
+      if (releaseTimer) clearTimeout(releaseTimer);
+      releaseTimer = setTimeout(() => {
+        releaseTimer = undefined;
+        if (cancelled || inView) return;
+        clearSrc();
+      }, 280);
     };
 
     const play = () => {
@@ -113,9 +189,10 @@ export function ViewportVideo({
 
     const nearIo = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) attach();
-      // Keep src attached — pause only via viewIo (avoids mobile reload scramble).
+      else releaseMobile();
     }, {
-      rootMargin: isNarrowViewport() ? '240px 0px' : '480px 0px',
+      // Tight margin on phones: fewer simultaneous decoders = less frame bleed.
+      rootMargin: isNarrowViewport() ? '120px 0px' : '480px 0px',
       threshold: 0,
     });
 
@@ -126,11 +203,11 @@ export function ViewportVideo({
     }, { threshold: 0 });
 
     const onReady = () => {
-      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) setReady(true);
+      armFrameReveal();
       if (inView) play();
     };
 
-    const onPlaying = () => setReady(true);
+    const onPlaying = () => armFrameReveal();
 
     const onEnded = () => {
       if (!loopDelayMs) return;
@@ -149,8 +226,8 @@ export function ViewportVideo({
         && (video.currentSrc.includes('/mobile/') || activeSrc.includes('/mobile/'))
         && stripQuery(activeSrc) !== stripQuery(src)
       ) {
-        attached = false;
-        delete video.dataset.src;
+        hide();
+        clearSrc();
         setActiveSrc(src);
       }
     };
@@ -172,7 +249,13 @@ export function ViewportVideo({
     reducedMotion.addEventListener('change', onVisibility);
 
     return () => {
+      cancelled = true;
       if (replayTimer) clearTimeout(replayTimer);
+      if (releaseTimer) clearTimeout(releaseTimer);
+      const rvfc = video as HTMLVideoElement & { cancelVideoFrameCallback?: (id: number) => void };
+      if (frameCallbackId !== undefined && typeof rvfc.cancelVideoFrameCallback === 'function') {
+        rvfc.cancelVideoFrameCallback(frameCallbackId);
+      }
       nearIo.disconnect();
       viewIo.disconnect();
       video.removeEventListener('loadeddata', onReady);

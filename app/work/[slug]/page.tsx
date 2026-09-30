@@ -82,10 +82,10 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
   const useMobile = Boolean(media && media.videos.has(slot) && hasMobileVideo(media.folder, slot));
   const poster = media && media.videos.has(slot) ? posterFor(media.folder, slot) : undefined;
   const lqip = media && !media.videos.has(slot) ? lqipFor(media.folder, slot) : undefined;
-  return <figure className={`placeholder ${tone}${src ? ' has-media' : ''}${src === '/media/dji-romo/10.mp4' ? ' trim-edge' : ''}`} style={size ? { '--media-ratio': `${size.width} / ${size.height}` } as CSSProperties : undefined}>
+  return <figure className={`placeholder ${tone}${src ? ' has-media' : ''}${src === '/media/dji-romo/10.mp4' ? ' trim-edge' : ''}`} style={size ? { '--media-ratio': `${size.width} / ${size.height}` } as CSSProperties : undefined} data-slot={pad2(slot)}>
     {mediaSrc && (media?.videos.has(slot)
-      ? <ViewportVideo src={mediaSrc} width={size?.width} height={size?.height} mobile={useMobile} poster={poster} />
-      : <CaseStill src={mediaSrc} lqip={lqip} priority={slot === 1} />)}
+      ? <ViewportVideo key={mediaSrc} src={mediaSrc} width={size?.width} height={size?.height} mobile={useMobile} poster={poster} />
+      : <CaseStill key={mediaSrc} src={mediaSrc} lqip={lqip} priority={slot === 1} />)}
     {showSlotNumber && <strong className="slot-number">{String(number).padStart(2, '0')}</strong>}
   </figure>;
 }

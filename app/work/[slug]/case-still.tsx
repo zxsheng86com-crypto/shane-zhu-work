@@ -34,6 +34,7 @@ export function CaseStill({
     <span className={`case-still${ready ? ' is-ready' : ''}${lqip ? ' has-lqip' : ''}`}>
       {lqip ? <span className="case-media-lqip" style={{ backgroundImage: `url(${lqip})` }} aria-hidden /> : null}
       <Image
+        key={src}
         ref={imgRef}
         src={src}
         alt=""

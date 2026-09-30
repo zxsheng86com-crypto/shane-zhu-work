@@ -73,6 +73,14 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 @media(max-width:800px){
   /* Mobile: skip LQIP blur limbo — dark plate + sharp fade only. */
   .case-media-lqip{display:none}
+  /*
+   * Safari decoder bleed: a not-yet-ready <video> can briefly paint another
+   * slot's frame even at opacity:0. Keep it out of the compositor until the
+   * player confirms THIS element's first painted frame.
+   */
+  .case-video>video{visibility:hidden;transition:none}
+  .case-video.is-ready>video{visibility:visible}
+  .case-video.is-ready .case-media-poster{transition:opacity .25s ease}
 }
 
 .home-hero,.page-intro,.service-hero{display:flex;flex-direction:column;justify-content:flex-end;min-height:556px;padding:80px 16px}
