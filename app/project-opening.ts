@@ -302,10 +302,19 @@ function loadImageProgress(url: string, onShare: (ratio: number) => void) {
   });
 }
 
+function entryImageUrl(desktopUrl: string) {
+  if (typeof window === 'undefined') return desktopUrl;
+  if (!window.matchMedia('(max-width: 800px)').matches) return desktopUrl;
+  const path = stripQuery(desktopUrl);
+  if (!path.endsWith('.jpg')) return desktopUrl;
+  const mobilePath = path.replace(/\/([^/]+)$/, '/mobile/$1');
+  if (mobilePath === path) return desktopUrl;
+  return desktopUrl.replace(path, mobilePath);
+}
+
 /**
  * Entry gate loads stills + video posters for slots 01–06 only.
- * Full MP4 decode stays on the real <video> players (eager bind) so the
- * bar does not jump to ~75% then freeze on a 17MB Safari decode.
+ * On phones, prefer /mobile/*.jpg so we do not pull multi‑MB desktop masters.
  */
 export async function loadCaseEntryPack(slug: string, onProgress?: (value: number) => void) {
   if (!isProjectSlug(slug)) {
@@ -319,7 +328,7 @@ export async function loadCaseEntryPack(slug: string, onProgress?: (value: numbe
     if (item.kind === 'video') {
       if (item.poster) urls.push(item.poster);
     } else {
-      urls.push(item.url);
+      urls.push(entryImageUrl(item.url));
     }
   }
 
@@ -334,7 +343,6 @@ export async function loadCaseEntryPack(slug: string, onProgress?: (value: numbe
     onProgress?.(Math.max(0, Math.min(99, Math.round((sum / urls.length) * 100))));
   };
 
-  // Sequential image decode so progress walks forward instead of finishing in one burst.
   for (let index = 0; index < urls.length; index += 1) {
     await loadImageProgress(urls[index], (ratio) => {
       shares[index] = ratio;
@@ -373,9 +381,11 @@ export function warmCaseLookahead(slug: string) {
 }
 
 export function shouldEagerBindCaseSlot(slot: number) {
-  return slot >= 1 && slot <= CASE_ENTRY_SLOTS + CASE_LOOKAHEAD_SLOTS;
+  // Client players decide the real window; this is a desktop-oriented hint.
+  return slot >= 1 && slot <= 6;
 }
 
+/** First-screen stills only — avoid priority-loading 8× multi‑MB JPGs on phones. */
 export function shouldPriorityCaseSlot(slot: number) {
-  return slot >= 1 && slot <= CASE_ENTRY_SLOTS + CASE_LOOKAHEAD_SLOTS;
+  return slot >= 1 && slot <= 2;
 }

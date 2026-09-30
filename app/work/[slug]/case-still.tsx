@@ -3,40 +3,62 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 
+function isNarrowViewport() {
+  return typeof window !== 'undefined' && window.matchMedia('(max-width: 800px)').matches;
+}
+
+function withQuery(path: string, from: string) {
+  const q = from.includes('?') ? from.slice(from.indexOf('?')) : '';
+  return `${path}${q}`;
+}
+
+function pickSrc(src: string, mobileSrc: string | undefined, allowMobile: boolean) {
+  if (allowMobile && mobileSrc && isNarrowViewport()) return mobileSrc;
+  return src;
+}
+
 /**
- * Justified-style still:
- * LQIP underneath (CSS blur) → sharp image fades in on load.
+ * Case still — uses /mobile/*.jpg on narrow viewports when present.
  */
 export function CaseStill({
   src,
+  mobileSrc,
   lqip,
   sizes = '(max-width: 1024px) 100vw, 81vw',
   priority = false,
 }: {
   src: string;
+  mobileSrc?: string;
   lqip?: string;
   sizes?: string;
   priority?: boolean;
 }) {
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const allowMobile = Boolean(mobileSrc);
+  const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, allowMobile));
   const [ready, setReady] = useState(false);
 
-  const markReady = () => setReady(true);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 800px)');
+    const sync = () => setActiveSrc(pickSrc(src, mobileSrc, allowMobile));
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, [src, mobileSrc, allowMobile]);
 
-  // Cached images can skip onLoad — catch them.
   useEffect(() => {
     setReady(false);
     const node = imgRef.current;
     if (node?.complete && node.naturalWidth > 0) setReady(true);
-  }, [src]);
+  }, [activeSrc]);
 
   return (
     <span className={`case-still${ready ? ' is-ready' : ''}${lqip ? ' has-lqip' : ''}`}>
       {lqip ? <span className="case-media-lqip" style={{ backgroundImage: `url(${lqip})` }} aria-hidden /> : null}
       <Image
-        key={src}
+        key={activeSrc}
         ref={imgRef}
-        src={src}
+        src={activeSrc}
         alt=""
         fill
         sizes={sizes}
@@ -47,12 +69,19 @@ export function CaseStill({
         data-pin-nopin="true"
         onLoad={(event) => {
           const node = event.currentTarget;
-          // Ignore stale load events from a previous src.
-          if (node.currentSrc && !node.currentSrc.includes(src.split('?')[0].split('/').pop() || '')) return;
-          markReady();
+          const leaf = activeSrc.split('?')[0].split('/').pop() || '';
+          if (node.currentSrc && leaf && !node.currentSrc.includes(leaf)) return;
+          setReady(true);
         }}
       />
       <span className="case-video-mask" aria-hidden />
     </span>
   );
+}
+
+/** Build /mobile/ sibling URL for a case still when the file exists server-side. */
+export function mobileStillSrc(src: string) {
+  const bare = src.split('?')[0];
+  if (!bare.endsWith('.jpg')) return undefined;
+  return withQuery(bare.replace(/\/([^/]+)$/, '/mobile/$1'), src);
 }

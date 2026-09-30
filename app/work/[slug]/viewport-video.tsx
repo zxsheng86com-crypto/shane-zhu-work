@@ -88,19 +88,22 @@ export function ViewportVideo({
   height,
   mobile = false,
   poster,
-  eager = false,
+  slot,
 }: {
   src: string;
   width?: number;
   height?: number;
   mobile?: boolean;
   poster?: string;
-  eager?: boolean;
+  /** Case slot number — used to limit eager binds on phones. */
+  slot?: number;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const loopDelayMs = Math.max(0, videoLoopDelays[stripQuery(src)] ?? 0);
   const entryReady = useCaseEntryReady();
   const mobileSrc = withQuery(src.replace(/\/([^/?]+)(\?.*)?$/, '/mobile/$1'), src);
+  // Phones: only pre-bind the first couple; desktop can warm a short runway.
+  const eager = typeof slot === 'number' && slot >= 1 && slot <= (isNarrowViewport() ? 2 : 6);
 
   const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, mobile));
   const [ready, setReady] = useState(false);
@@ -292,8 +295,8 @@ export function ViewportVideo({
         img.decoding = 'async';
         img.src = poster;
       }
-      // Safari has a tiny hardware decode pool — don't stampede AE-sized MP4s.
-      if (isSafari()) {
+      // Mobile Chrome also has a small decode pool — serialize eager binds everywhere.
+      if (isSafari() || isNarrowViewport()) {
         void enqueueSafariEagerBind(() => {
           if (!cancelled) ensureBound();
           return new Promise<void>((resolve) => {

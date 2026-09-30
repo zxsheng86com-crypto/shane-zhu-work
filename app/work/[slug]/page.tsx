@@ -6,12 +6,12 @@ import { Header, projects } from '../../site';
 import { CaseDescription } from './case-description';
 import { RevealFlow } from './reveal-flow';
 import { ViewportVideo } from './viewport-video';
-import { CaseStill } from './case-still';
+import { CaseStill, mobileStillSrc } from './case-still';
 import type { CSSProperties } from 'react';
 import mediaDimensions from '../../media-dimensions.json';
 import { Localized } from '../../localized';
 import { CaseProjectPrefetch } from '../../project-prefetch';
-import { shouldEagerBindCaseSlot, shouldPriorityCaseSlot } from '../../project-opening';
+import { shouldPriorityCaseSlot } from '../../project-opening';
 import { CaseEntryGate } from './case-entry-gate';
 
 export function generateStaticParams() {
@@ -37,9 +37,13 @@ function publicMedia(...parts: string[]) {
   return path.join(process.cwd(), 'public', 'media', ...parts);
 }
 
-/** Only enable /mobile/ when the file actually exists — avoids dead <source> on phones. */
+/** Only enable /mobile/ when the file actually exists — avoids dead sources on phones. */
 function hasMobileVideo(folder: string, slot: number) {
   return existsSync(publicMedia(folder, 'mobile', `${pad2(slot)}.mp4`));
+}
+
+function hasMobileStill(folder: string, slot: number) {
+  return existsSync(publicMedia(folder, 'mobile', `${pad2(slot)}.jpg`));
 }
 
 function posterFor(folder: string, slot: number) {
@@ -84,6 +88,9 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
   const useMobile = Boolean(media && media.videos.has(slot) && hasMobileVideo(media.folder, slot));
   const poster = media && media.videos.has(slot) ? posterFor(media.folder, slot) : undefined;
   const lqip = media && !media.videos.has(slot) ? lqipFor(media.folder, slot) : undefined;
+  const stillMobile = media && !media.videos.has(slot) && hasMobileStill(media.folder, slot)
+    ? mobileStillSrc(mediaSrc || '')
+    : undefined;
   return <figure className={`placeholder ${tone}${src ? ' has-media' : ''}${src === '/media/dji-romo/10.mp4' ? ' trim-edge' : ''}`} style={size ? { '--media-ratio': `${size.width} / ${size.height}` } as CSSProperties : undefined} data-slot={pad2(slot)}>
     {mediaSrc && (media?.videos.has(slot)
       ? <ViewportVideo
@@ -93,9 +100,9 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
           height={size?.height}
           mobile={useMobile}
           poster={poster}
-          eager={shouldEagerBindCaseSlot(slot)}
+          slot={slot}
         />
-      : <CaseStill key={`${projectSlug}-${pad2(slot)}-still`} src={mediaSrc} lqip={lqip} priority={shouldPriorityCaseSlot(slot)} />)}
+      : <CaseStill key={`${projectSlug}-${pad2(slot)}-still`} src={mediaSrc} mobileSrc={stillMobile} lqip={lqip} priority={shouldPriorityCaseSlot(slot)} />)}
     {showSlotNumber && <strong className="slot-number">{String(number).padStart(2, '0')}</strong>}
   </figure>;
 }
