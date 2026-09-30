@@ -584,7 +584,7 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
   return <div ref={fieldRef} className="cf-hero-particles">
     <picture>
       {/* Mobile-first: default src is the light asset so phones never pull the 3.7MB desktop PNG. */}
-      <source media="(min-width: 801px)" srcSet="/media/home-galaxy.png" />
+      <source media="(min-width: 801px)" srcSet="/media/home-galaxy.jpg" />
       {/* eslint-disable-next-line @next/next/no-img-element -- need direct img for WebGL sampling */}
       <img
         ref={imageRef}

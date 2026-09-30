@@ -6,34 +6,16 @@ export const videoLoopDelays: Record<string, number> = {
   '/media/dji-aura/04.mp4': 1000,
 };
 
-/** Cap concurrent full video downloads — mobile is stricter. Desktop still loads originals. */
-const preloadWaiters: Array<() => void> = [];
-let preloadActive = 0;
+/**
+ * Justified-adapted for local large files:
+ * - Attach src when near (no global queue — never block the visible one)
+ * - Keep src on desktop after attach (pause = freeze frame)
+ * - preload=metadata; play/pause from intersection only
+ * - Sharp poster under video until first frame fades in
+ */
 
-function maxConcurrentPreloads() {
-  if (typeof window === 'undefined') return 2;
-  if (window.matchMedia('(max-width: 800px)').matches) return 1;
-  return 2;
-}
-
-function acquirePreloadSlot() {
-  return new Promise<void>((resolve) => {
-    const attempt = () => {
-      if (preloadActive < maxConcurrentPreloads()) {
-        preloadActive += 1;
-        resolve();
-        return;
-      }
-      preloadWaiters.push(attempt);
-    };
-    attempt();
-  });
-}
-
-function releasePreloadSlot() {
-  preloadActive = Math.max(0, preloadActive - 1);
-  const next = preloadWaiters.shift();
-  next?.();
+function isNarrowViewport() {
+  return typeof window !== 'undefined' && window.matchMedia('(max-width: 800px)').matches;
 }
 
 function stripQuery(path: string) {
@@ -43,6 +25,11 @@ function stripQuery(path: string) {
 function withQuery(path: string, from: string) {
   const q = from.includes('?') ? from.slice(from.indexOf('?')) : '';
   return `${path}${q}`;
+}
+
+function pickSrc(src: string, mobileSrc: string, allowMobile: boolean) {
+  if (allowMobile && isNarrowViewport()) return mobileSrc;
+  return src;
 }
 
 export function ViewportVideo({
@@ -55,124 +42,107 @@ export function ViewportVideo({
   src: string;
   width?: number;
   height?: number;
-  /** When true and a mobile file exists, phones use /mobile/ variant. Desktop always uses `src` (full quality). */
   mobile?: boolean;
   poster?: string;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
-  const holdingPreload = useRef(false);
   const loopDelayMs = Math.max(0, videoLoopDelays[stripQuery(src)] ?? 0);
   const mobileSrc = withQuery(src.replace(/\/([^/?]+)(\?.*)?$/, '/mobile/$1'), src);
 
-  const [activeSrc, setActiveSrc] = useState(src);
+  const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, mobile));
+  const [ready, setReady] = useState(false);
 
-  // Pick mobile vs desktop source without <source media> (404 mobile does not fall back reliably).
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 800px)');
-    const sync = () => {
-      setActiveSrc(mobile && mq.matches ? mobileSrc : src);
-    };
+    const sync = () => setActiveSrc(pickSrc(src, mobileSrc, mobile));
     sync();
     mq.addEventListener('change', sync);
     return () => mq.removeEventListener('change', sync);
   }, [src, mobile, mobileSrc]);
 
   useEffect(() => {
+    setReady(false);
+  }, [activeSrc]);
+
+  useEffect(() => {
     const video = ref.current;
     if (!video || typeof IntersectionObserver === 'undefined') return;
 
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-    const narrow = () => matchMedia('(max-width: 800px)').matches;
+
     video.muted = true;
     video.defaultMuted = true;
-    video.autoplay = false;
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
     video.controls = reducedMotion.matches;
-    // Start cold — metadata on every tile saturates mobile networks.
     video.preload = 'none';
 
-    let visible = false;
+    let inView = false;
     let waiting = false;
-    let near = false;
+    let attached = false;
     let replayTimer: ReturnType<typeof setTimeout> | undefined;
-    let cancelled = false;
 
-    const pause = () => {
+    const freeze = () => {
       video.autoplay = false;
-      video.pause();
+      if (!video.paused) video.pause();
+    };
+
+    const attach = () => {
+      if (attached && video.dataset.src === activeSrc) return;
+      attached = true;
+      video.dataset.src = activeSrc;
+      video.preload = 'metadata';
+      video.src = activeSrc;
+    };
+
+    const detachMobile = () => {
+      if (!isNarrowViewport()) return;
+      freeze();
+      attached = false;
+      delete video.dataset.src;
+      video.preload = 'none';
+      video.removeAttribute('src');
+      try { video.load(); } catch { /* ignore */ }
+      setReady(false);
     };
 
     const play = () => {
-      video.autoplay = visible && !waiting && !reducedMotion.matches && !document.hidden;
-      if (video.autoplay && video.paused) {
+      if (!inView || waiting || reducedMotion.matches || document.hidden) {
+        video.autoplay = false;
+        return;
+      }
+      attach();
+      video.autoplay = true;
+      if (video.paused) {
         void video.play().catch((error: DOMException) => {
           if (error.name !== 'AbortError') video.controls = true;
         });
       }
     };
 
-    const promotePreload = async () => {
-      if (cancelled || holdingPreload.current || video.preload === 'auto') return;
-      await acquirePreloadSlot();
-      if (cancelled || !near) {
-        releasePreloadSlot();
-        return;
-      }
-      holdingPreload.current = true;
-      video.preload = 'auto';
-      // Ensure the browser actually starts the chosen src (after mobile/desktop swap).
-      if (video.dataset.activeSrc !== activeSrc) {
-        video.dataset.activeSrc = activeSrc;
-        video.src = activeSrc;
-      }
-      video.load();
-    };
-
-    const demotePreload = () => {
-      if (!holdingPreload.current) return;
-      holdingPreload.current = false;
-      if (!visible) {
-        video.preload = 'none';
-        // Drop buffered data when far away so other clips can load.
-        video.removeAttribute('src');
-        video.load();
-        video.dataset.activeSrc = '';
-      }
-      releasePreloadSlot();
-    };
-
-    const preload = new IntersectionObserver(([entry]) => {
-      near = entry.isIntersecting;
-      if (near) void promotePreload();
-      else {
-        pause();
-        demotePreload();
-      }
+    const nearIo = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) attach();
+      else detachMobile();
     }, {
-      // Mobile: only warm the next clip. Desktop: warmer lookahead, still originals.
-      rootMargin: narrow() ? '120px 0px' : '640px 0px',
+      rootMargin: isNarrowViewport() ? '200px 0px' : '480px 0px',
+      threshold: 0,
     });
 
-    const playback = new IntersectionObserver(([entry]) => {
-      const viewportHeight = entry.rootBounds?.height ?? innerHeight;
-      const visibleHeight = Math.min(entry.intersectionRect.height, viewportHeight);
-      const maximumVisibleHeight = Math.min(entry.boundingClientRect.height, viewportHeight);
-      const visibleRatio = entry.isIntersecting && maximumVisibleHeight > 0 ? visibleHeight / maximumVisibleHeight : 0;
-      visible = visibleRatio >= 0.4;
-      if (visible) {
-        if (!holdingPreload.current) void promotePreload();
-        play();
-      } else {
-        pause();
-      }
-    }, { threshold: [0, 0.1, 0.2, 0.4, 0.6, 0.8, 1] });
+    const viewIo = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      if (inView) play();
+      else freeze();
+    }, { threshold: 0 });
 
-    const visibility = () => {
-      if (reducedMotion.matches) video.controls = true;
-      if (document.hidden || !visible || reducedMotion.matches) pause();
-      else play();
+    const onReady = () => {
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) setReady(true);
+      if (inView) play();
     };
 
-    const ended = () => {
+    const onPlaying = () => setReady(true);
+
+    const onEnded = () => {
       if (!loopDelayMs) return;
       waiting = true;
       video.autoplay = false;
@@ -184,60 +154,64 @@ export function ViewportVideo({
     };
 
     const onError = () => {
-      // Mobile file missing/corrupt → fall back to full desktop original (no recompression).
-      if (mobile && video.currentSrc.includes('/mobile/') && stripQuery(activeSrc) !== stripQuery(src)) {
+      if (
+        mobile
+        && (video.currentSrc.includes('/mobile/') || activeSrc.includes('/mobile/'))
+        && stripQuery(activeSrc) !== stripQuery(src)
+      ) {
+        attached = false;
+        delete video.dataset.src;
         setActiveSrc(src);
       }
     };
 
-    preload.observe(video);
-    playback.observe(video);
-    document.addEventListener('visibilitychange', visibility);
-    reducedMotion.addEventListener('change', visibility);
-    video.addEventListener('ended', ended);
-    video.addEventListener('canplay', play);
+    const onVisibility = () => {
+      if (reducedMotion.matches) video.controls = true;
+      if (document.hidden || reducedMotion.matches) freeze();
+      else if (inView) play();
+    };
+
+    nearIo.observe(video);
+    viewIo.observe(video);
+    video.addEventListener('loadeddata', onReady);
+    video.addEventListener('canplay', onReady);
+    video.addEventListener('playing', onPlaying);
+    video.addEventListener('ended', onEnded);
     video.addEventListener('error', onError);
+    document.addEventListener('visibilitychange', onVisibility);
+    reducedMotion.addEventListener('change', onVisibility);
 
     return () => {
-      cancelled = true;
       if (replayTimer) clearTimeout(replayTimer);
-      preload.disconnect();
-      playback.disconnect();
-      document.removeEventListener('visibilitychange', visibility);
-      reducedMotion.removeEventListener('change', visibility);
-      video.removeEventListener('ended', ended);
-      video.removeEventListener('canplay', play);
+      nearIo.disconnect();
+      viewIo.disconnect();
+      video.removeEventListener('loadeddata', onReady);
+      video.removeEventListener('canplay', onReady);
+      video.removeEventListener('playing', onPlaying);
+      video.removeEventListener('ended', onEnded);
       video.removeEventListener('error', onError);
-      pause();
-      demotePreload();
+      document.removeEventListener('visibilitychange', onVisibility);
+      reducedMotion.removeEventListener('change', onVisibility);
+      freeze();
     };
   }, [activeSrc, src, mobile, loopDelayMs]);
 
-  // Keep element src in sync when falling back mobile → desktop.
-  useEffect(() => {
-    const video = ref.current;
-    if (!video) return;
-    if (video.dataset.activeSrc === activeSrc) return;
-    const wasPlaying = !video.paused;
-    video.dataset.activeSrc = activeSrc;
-    video.src = activeSrc;
-    if (video.preload === 'auto') video.load();
-    if (wasPlaying) void video.play().catch(() => {});
-  }, [activeSrc]);
-
   return (
-    <video
-      ref={ref}
-      width={width}
-      height={height}
-      poster={poster}
-      muted
-      loop={!loopDelayMs}
-      playsInline
-      preload="none"
-      draggable={false}
-      controlsList="nodownload nofullscreen"
-      disablePictureInPicture
-    />
+    <span className={`case-video${ready ? ' is-ready' : ''}${poster ? ' has-poster' : ''}`}>
+      {poster ? <span className="case-media-poster" style={{ backgroundImage: `url(${poster})` }} aria-hidden /> : null}
+      <video
+        ref={ref}
+        width={width}
+        height={height}
+        poster={poster}
+        muted
+        loop={!loopDelayMs}
+        playsInline
+        preload="none"
+        draggable={false}
+        controlsList="nodownload nofullscreen"
+        disablePictureInPicture
+      />
+    </span>
   );
 }

@@ -8,6 +8,7 @@ import { Localized } from './localized';
 import { requestShaneGridSync, startShaneGrid } from './shane-grid';
 import { SiteCloseFooter } from './site-close-footer';
 import { projects } from './site';
+import { HomeProjectPrefetch } from './project-prefetch';
 
 const featured = projects.filter((project) => project.slug !== 'confidential-project').slice(0, 5);
 const coverFor = (project: (typeof featured)[number]) => project.workCover || project.cover || '';
@@ -445,6 +446,7 @@ export function HomeCarousel() {
   }, [introPhase, lottieReady]);
 
   return <main className="cf-home" data-intro-phase={introPhase} {...(introGate ? { 'data-intro-gate': '' } : {})} aria-label="Selected work">
+    <HomeProjectPrefetch enabled={introPhase === 'complete'} />
     <section ref={heroRef} className="cf-hero" aria-label="Shane Zhu">
       {sceneEnabled ? <HomeParticleField onReady={() => setParticlesReady(true)} /> : null}
       <h1 className={`cf-wordmark${lottieReady ? ' is-lottie-on' : ''}`} aria-label="Shane">
@@ -481,7 +483,8 @@ export function HomeCarousel() {
       <div ref={trackRef} className="cf-covers-track cf-covers-desktop" style={{ height: `${featured.length + 1}00vh` }}>
         <div className="cf-covers-sticky">
           {featured.map((project, index) => <Link className="cf-cover" href={`/work/${project.slug}`} key={project.slug} ref={(element) => { coverRefs.current[index] = element; }}>
-            <Image src={coverFor(project)} alt="" fill sizes="100vw" loading={index === 0 ? 'eager' : 'lazy'} unoptimized draggable={false} />
+            {/* Lazy: hero LCP is galaxy/SHANE; both cover trees stay in DOM so eager would download hidden-branch covers on workplace nets. */}
+            <Image src={coverFor(project)} alt="" fill sizes="100vw" loading="lazy" unoptimized draggable={false} />
             <span className="cf-project-index">{String(index + 1).padStart(2, '0')}</span>
             <span className="cf-project-name">{String(project.titleEn ?? project.title).split('').map((character, letter) => <span className="cf-name-letter" key={`${character}-${letter}`}>{character === ' ' ? '\u00a0' : character}</span>)}</span>
             <span className="cf-project-description">
@@ -505,7 +508,7 @@ export function HomeCarousel() {
           return <Link className="cf-project-tile" href={`/work/${project.slug}`} key={`tile-${project.slug}`}>
             <div className="cf-project-tile-media">
               {src
-                ? <Image src={src} alt="" fill sizes="100vw" loading={index < 2 ? 'eager' : 'lazy'} unoptimized draggable={false} />
+                ? <Image src={src} alt="" fill sizes="100vw" loading="lazy" unoptimized draggable={false} />
                 : null}
             </div>
             <div className="cf-project-tile-meta">

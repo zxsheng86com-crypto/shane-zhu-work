@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { notFound } from 'next/navigation';
@@ -7,9 +6,11 @@ import { Header, projects } from '../../site';
 import { CaseDescription } from './case-description';
 import { RevealFlow } from './reveal-flow';
 import { ViewportVideo } from './viewport-video';
+import { CaseStill } from './case-still';
 import type { CSSProperties } from 'react';
 import mediaDimensions from '../../media-dimensions.json';
 import { Localized } from '../../localized';
+import { CaseProjectPrefetch } from '../../project-prefetch';
 
 export function generateStaticParams() {
   return projects.map(({ slug }) => ({ slug }));
@@ -56,6 +57,12 @@ function posterFor(folder: string, slot: number) {
   return undefined;
 }
 
+function lqipFor(folder: string, slot: number) {
+  const jpg = publicMedia(folder, 'lqip', `${pad2(slot)}.jpg`);
+  if (existsSync(jpg)) return `/media/${folder}/lqip/${pad2(slot)}.jpg`;
+  return undefined;
+}
+
 function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true }: { number: number; projectSlug: string; tone?: string; showSlotNumber?: boolean }) {
   const slot = number;
   const media = projectSlug === 'common-ground'
@@ -69,22 +76,25 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
         : projectSlug === 'dji-aura-logo'
           ? { folder: 'dji-aura', slots: auraSlots, videos: auraVideos }
         : undefined;
-  const src = media?.slots.has(slot) ? `/media/${media.folder}/${pad2(slot)}.${media.videos.has(slot) ? 'mp4' : 'png'}` : undefined;
+  const src = media?.slots.has(slot) ? `/media/${media.folder}/${pad2(slot)}.${media.videos.has(slot) ? 'mp4' : 'jpg'}` : undefined;
   const size = src ? (mediaDimensions as Record<string, { width: number; height: number }>)[src] : undefined;
-  const mediaSrc = src === '/media/dji-aura/06.png'
-    ? `${src}?v=20260923-r1`
+  const mediaSrc = src === '/media/dji-aura/06.jpg'
+    ? `${src}?v=20260930-jpg`
     : src && projectSlug === 'dji-power'
-    ? `${src}?v=20260923-r1`
+    ? `${src}?v=20260930-jpg`
     : src && projectSlug === 'dji-aura-logo'
-      ? `${src}?v=20260922-r2`
+      ? `${src}?v=20260930-jpg`
     : src && projectSlug === 'dji-fly'
-      ? `${src}?v=20260923-r3`
-    : src && projectSlug === 'common-ground' ? `${src}?v=20260923-r3`
-      : src && projectSlug === 'dji-avinox' ? `${src}?v=20260923-r1` : src;
+      ? `${src}?v=20260930-jpg`
+    : src && projectSlug === 'common-ground' ? `${src}?v=20260930-jpg`
+      : src && projectSlug === 'dji-avinox' ? `${src}?v=20260930-jpg` : src;
   const useMobile = Boolean(media && media.videos.has(slot) && hasMobileVideo(media.folder, slot));
   const poster = media && media.videos.has(slot) ? posterFor(media.folder, slot) : undefined;
+  const lqip = media && !media.videos.has(slot) ? lqipFor(media.folder, slot) : undefined;
   return <figure className={`placeholder ${tone}${src ? ' has-media' : ''}${src === '/media/dji-romo/10.mp4' ? ' trim-edge' : ''}`} style={size ? { '--media-ratio': `${size.width} / ${size.height}` } as CSSProperties : undefined}>
-    {mediaSrc && (media?.videos.has(slot) ? <ViewportVideo src={mediaSrc} width={size?.width} height={size?.height} mobile={useMobile} poster={poster} /> : <Image src={mediaSrc} fill sizes="(max-width: 1024px) 100vw, 81vw" unoptimized alt="" loading={slot === 1 ? 'eager' : 'lazy'} draggable={false} data-pin-nopin="true" />)}
+    {mediaSrc && (media?.videos.has(slot)
+      ? <ViewportVideo src={mediaSrc} width={size?.width} height={size?.height} mobile={useMobile} poster={poster} />
+      : <CaseStill src={mediaSrc} lqip={lqip} priority={slot === 1} />)}
     {showSlotNumber && <strong className="slot-number">{String(number).padStart(2, '0')}</strong>}
   </figure>;
 }
@@ -103,6 +113,7 @@ export default async function Project({ params }: { params: Promise<{ slug: stri
   const next = projects[(index + 1) % projects.length];
   return <>
     <Header />
+    <CaseProjectPrefetch slug={slug} />
     <main className="case-study">
       <header className="case-hero">
         <div><p><Localized en={project.titleEn ?? project.title} zh={project.title} /></p><h1><Localized en={project.textEn} zh={project.text} /></h1></div>

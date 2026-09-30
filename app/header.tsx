@@ -54,17 +54,21 @@ export function Header() {
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
-  const toggleLanguage = () => {
-    const next = language === 'en' ? 'zh' : 'en';
+  const setSiteLanguage = (next: 'en' | 'zh') => {
+    if (next === language) return;
     setLanguage(next);
     document.documentElement.dataset.lang = next;
     document.documentElement.lang = next === 'zh' ? 'zh-CN' : 'en';
     try { window.localStorage.setItem('portfolio-language', next); } catch {}
   };
 
-  const languageToggle = <button className="language-toggle" type="button" onClick={toggleLanguage} aria-label={language === 'en' ? 'Switch to Chinese' : 'Switch to English'}>
-    <span>E</span><i>/</i><span>Z</span>
-  </button>;
+  const languageToggle = (
+    <div className="language-toggle" role="group" aria-label="Language">
+      <button type="button" data-lang-option="en" aria-pressed={language === 'en'} aria-label="English" onClick={() => setSiteLanguage('en')}>E</button>
+      <i aria-hidden>/</i>
+      <button type="button" data-lang-option="zh" aria-pressed={language === 'zh'} aria-label="中文" onClick={() => setSiteLanguage('zh')}>Z</button>
+    </div>
+  );
 
   const links = <><Link className={pathname === '/work' ? 'active' : ''} href="/work" aria-label="Work" aria-current={pathname === '/work' ? 'page' : undefined}>Work</Link><Link className={pathname.startsWith('/about') ? 'active' : ''} href="/about" aria-label="About" aria-current={pathname.startsWith('/about') ? 'page' : undefined}>About</Link></>;
 

@@ -2,27 +2,10 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { networkAllowsPrefetch } from './media-queue';
+import { warmOpeningPack } from './project-opening';
 
-const warmedVideos = new Map<string, HTMLVideoElement>();
-
-function warmVideo(src?: string) {
-  if (!src || warmedVideos.has(src)) return;
-  if (warmedVideos.size >= 2) {
-    const oldest = warmedVideos.entries().next().value as [string, HTMLVideoElement] | undefined;
-    if (oldest) {
-      oldest[1].removeAttribute('src');
-      oldest[1].load();
-      warmedVideos.delete(oldest[0]);
-    }
-  }
-  const video = document.createElement('video');
-  video.muted = true;
-  video.preload = 'auto';
-  video.src = src;
-  video.load();
-  warmedVideos.set(src, video);
-}
-
+/** Reveal motion + hover intent warm for legacy project grids. */
 export function HomeMotion({ children }: { children: React.ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -56,15 +39,16 @@ export function HomeMotion({ children }: { children: React.ReactNode }) {
     const container = root.current;
     if (!container) return;
     const links = [...container.querySelectorAll<HTMLAnchorElement>('a.project-card[href^="/work/"]')];
-    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
-    const canWarmVideo = matchMedia('(hover: hover) and (pointer: fine)').matches && !connection?.saveData && !connection?.effectiveType?.includes('2g');
+    const canWarm = networkAllowsPrefetch() && matchMedia('(hover: hover) and (pointer: fine)').matches;
     const warm = (link: HTMLAnchorElement) => {
-      router.prefetch(link.getAttribute('href') ?? '');
-      if (canWarmVideo) warmVideo(link.dataset.prefetchMedia);
+      const href = link.getAttribute('href') ?? '';
+      const slug = href.replace(/^\/work\//, '').split(/[?#]/)[0];
+      router.prefetch(href);
+      if (canWarm && slug) void warmOpeningPack(slug, (path) => router.prefetch(path));
     };
     const idleTask = () => {
       links.forEach((link) => router.prefetch(link.getAttribute('href') ?? ''));
-      if (canWarmVideo) warmVideo(links[0]?.dataset.prefetchMedia);
+      if (canWarm) warm(links[0]);
     };
     const idleId = window.requestIdleCallback?.(idleTask, { timeout: 1800 }) ?? window.setTimeout(idleTask, 1200);
     const cleanups = links.map((link) => {
