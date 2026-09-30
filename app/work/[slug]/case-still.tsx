@@ -7,11 +7,6 @@ function isNarrowViewport() {
   return typeof window !== 'undefined' && window.matchMedia('(max-width: 800px)').matches;
 }
 
-function withQuery(path: string, from: string) {
-  const q = from.includes('?') ? from.slice(from.indexOf('?')) : '';
-  return `${path}${q}`;
-}
-
 function pickSrc(src: string, mobileSrc: string | undefined, allowMobile: boolean) {
   if (allowMobile && mobileSrc && isNarrowViewport()) return mobileSrc;
   return src;
@@ -77,11 +72,4 @@ export function CaseStill({
       <span className="case-video-mask" aria-hidden />
     </span>
   );
-}
-
-/** Build /mobile/ sibling URL for a case still when the file exists server-side. */
-export function mobileStillSrc(src: string) {
-  const bare = src.split('?')[0];
-  if (!bare.endsWith('.jpg')) return undefined;
-  return withQuery(bare.replace(/\/([^/]+)$/, '/mobile/$1'), src);
 }
