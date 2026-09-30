@@ -52,7 +52,7 @@ export function CaseStill({
           markReady();
         }}
       />
-      {!ready ? <span className="case-video-mask" aria-hidden /> : null}
+      <span className="case-video-mask" aria-hidden />
     </span>
   );
 }
