@@ -14,7 +14,8 @@ function pickSrc(src: string, mobileSrc: string | undefined, allowMobile: boolea
 function pathOf(url: string) {
   const bare = url.split('?')[0];
   try {
-    return bare.startsWith('http') ? new URL(bare).pathname : bare;
+    const path = bare.startsWith('http') ? new URL(bare).pathname : bare;
+    return decodeURIComponent(path);
   } catch {
     return bare;
   }
@@ -25,7 +26,7 @@ function matchesWant(img: HTMLImageElement, wantUrl: string) {
   const want = pathOf(wantUrl);
   const current = pathOf(img.currentSrc || img.getAttribute('src') || '');
   if (!current || !want) return false;
-  return current === want || current.endsWith(want);
+  return current === want;
 }
 
 /**

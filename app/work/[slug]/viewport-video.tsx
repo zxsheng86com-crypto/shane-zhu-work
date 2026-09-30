@@ -8,24 +8,20 @@ export const videoLoopDelays: Record<string, number> = {
 };
 
 /**
- * Case video — never show pixels until THIS element's currentSrc matches
- * the wanted file and a real frame exists. Solid gray until then.
+ * Case video — one slot, one file.
+ *
+ * Scramble (slot A painting slot B frames) is Safari/Chrome decoder bleed when
+ * too many <video src> stay attached. Rules:
+ * - Exact pathname match only (no endsWith)
+ * - Cap concurrent attached sources site-wide
+ * - Detach when leaving view (gray until rebound)
+ * - Never tear down bind when the entry gate opens — only gate play()
  */
 
 function isSafari() {
   if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent;
   return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|Firefox|Android/i.test(ua);
-}
-
-let safariEagerTail: Promise<void> = Promise.resolve();
-function enqueueSafariEagerBind(task: () => Promise<void>) {
-  const run = safariEagerTail.then(task, task);
-  safariEagerTail = run.then(
-    () => undefined,
-    () => undefined,
-  );
-  return run;
 }
 
 function isNarrowViewport() {
@@ -49,7 +45,8 @@ function pickSrc(src: string, mobileSrc: string, allowMobile: boolean) {
 function pathOf(url: string) {
   const bare = stripQuery(url);
   try {
-    return bare.startsWith('http') ? new URL(bare).pathname : bare;
+    const path = bare.startsWith('http') ? new URL(bare).pathname : bare;
+    return decodeURIComponent(path);
   } catch {
     return bare;
   }
@@ -60,25 +57,37 @@ function isBoundTo(video: HTMLVideoElement, wantUrl: string) {
   const wantPath = pathOf(wantUrl);
   const current = video.currentSrc || video.getAttribute('src') || '';
   if (!current) return false;
-  const curPath = pathOf(current);
-  return curPath === wantPath || curPath.endsWith(wantPath);
+  return pathOf(current) === wantPath;
 }
 
-function nudgeFirstFrame(video: HTMLVideoElement) {
-  try {
-    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.paused) return;
-    const from = video.currentTime;
-    video.currentTime = from > 0.05 ? from : Math.min(0.08, Math.max(0.001, (video.duration || 1) * 0.001));
-    if (from === 0) {
-      const restore = () => {
-        try {
-          if (video.currentTime !== 0) video.currentTime = 0;
-        } catch { /* ignore */ }
-        video.removeEventListener('seeked', restore);
-      };
-      video.addEventListener('seeked', restore);
-    }
-  } catch { /* ignore */ }
+/** Max simultaneous attached MP4 sources. Count-based — no stale element Set. */
+function maxAttached() {
+  if (isSafari() || isNarrowViewport()) return 1;
+  return 2;
+}
+
+let attachedCount = 0;
+const attachWaiters: Array<() => void> = [];
+
+function acquireAttach(): Promise<() => void> {
+  return new Promise((resolve) => {
+    const tryAcquire = () => {
+      if (attachedCount >= maxAttached()) {
+        attachWaiters.push(tryAcquire);
+        return;
+      }
+      attachedCount += 1;
+      let released = false;
+      resolve(() => {
+        if (released) return;
+        released = true;
+        attachedCount = Math.max(0, attachedCount - 1);
+        const next = attachWaiters.shift();
+        if (next) next();
+      });
+    };
+    tryAcquire();
+  });
 }
 
 export function ViewportVideo({
@@ -100,12 +109,15 @@ export function ViewportVideo({
   const loopDelayMs = Math.max(0, videoLoopDelays[stripQuery(src)] ?? 0);
   const entryReady = useCaseEntryReady();
   const mobileSrc = withQuery(src.replace(/\/([^/?]+)(\?.*)?$/, '/mobile/$1'), src);
-  const eager = typeof slot === 'number' && slot >= 1 && slot <= (isNarrowViewport() ? 2 : 6);
+  // Pre-warm only the first one–two slots; everything else binds on approach.
+  const eager = typeof slot === 'number' && slot >= 1 && slot <= (isNarrowViewport() ? 1 : 2);
 
   const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, mobile));
   const [ready, setReady] = useState(false);
   const wantRef = useRef(activeSrc);
   wantRef.current = activeSrc;
+  const entryReadyRef = useRef(entryReady);
+  entryReadyRef.current = entryReady;
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 800px)');
@@ -119,10 +131,10 @@ export function ViewportVideo({
     setReady(false);
   }, [activeSrc]);
 
+  // Bind / detach — does NOT depend on entryReady (avoids full rebind on gate open).
   useEffect(() => {
     const video = ref.current;
     if (!video || typeof IntersectionObserver === 'undefined') return;
-    if (!entryReady && !eager) return;
 
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -136,33 +148,62 @@ export function ViewportVideo({
     video.removeAttribute('poster');
 
     let inView = false;
+    let near = false;
     let waitingLoop = false;
     let cancelled = false;
     let bound = false;
+    let bindGen = 0;
+    let releaseAttach: (() => void) | null = null;
+    let acquireToken = 0;
     let frameCallbackId: number | undefined;
     let replayTimer: ReturnType<typeof setTimeout> | undefined;
-    let revealFallback: ReturnType<typeof setTimeout> | undefined;
-    let bindGeneration = 0;
+    let detachTimer: ReturnType<typeof setTimeout> | undefined;
 
     const hide = () => setReady(false);
+
+    const clearPipeline = () => {
+      hide();
+      bound = false;
+      video.dataset.want = '';
+      video.dataset.bindGen = '';
+      video.autoplay = false;
+      try {
+        video.pause();
+      } catch { /* ignore */ }
+      try {
+        video.removeAttribute('src');
+        video.load();
+      } catch { /* ignore */ }
+      video.preload = 'none';
+    };
+
+    const detach = () => {
+      if (detachTimer) {
+        clearTimeout(detachTimer);
+        detachTimer = undefined;
+      }
+      clearPipeline();
+      if (releaseAttach) {
+        releaseAttach();
+        releaseAttach = null;
+      }
+    };
 
     const revealIfValid = () => {
       if (cancelled) return;
       const want = wantRef.current;
       if (!isBoundTo(video, want)) return;
+      if (Number(video.dataset.bindGen || '0') !== bindGen) return;
       if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
       if (video.videoWidth < 2 || video.videoHeight < 2) return;
-      // Reject paints that still belong to a previous bind generation.
-      if (Number(video.dataset.bindGen || '0') !== bindGeneration) return;
       setReady(true);
     };
 
     const armReveal = () => {
       if (cancelled) return;
       if (!isBoundTo(video, wantRef.current)) return;
+      if (Number(video.dataset.bindGen || '0') !== bindGen) return;
       if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
-
-      nudgeFirstFrame(video);
 
       const rvfc = video as HTMLVideoElement & {
         requestVideoFrameCallback?: (cb: () => void) => number;
@@ -176,9 +217,6 @@ export function ViewportVideo({
           frameCallbackId = undefined;
           revealIfValid();
         });
-        // Only as last resort after a real loadeddata — never early.
-        if (revealFallback) clearTimeout(revealFallback);
-        revealFallback = setTimeout(revealIfValid, 280);
         return;
       }
       requestAnimationFrame(() => requestAnimationFrame(revealIfValid));
@@ -189,36 +227,12 @@ export function ViewportVideo({
       if (!video.paused) video.pause();
     };
 
-    const ensureBound = () => {
-      const want = wantRef.current;
-      if (bound && isBoundTo(video, want)) return;
-
-      hide();
-      bound = true;
-      bindGeneration += 1;
-      video.dataset.bindGen = String(bindGeneration);
-      video.dataset.want = want;
-
-      // Force a blank pipeline so Safari/Chrome cannot keep a foreign frame.
-      try {
-        video.pause();
-        video.removeAttribute('src');
-        video.load();
-      } catch { /* ignore */ }
-
-      video.preload = 'auto';
-      video.src = want;
-      try {
-        video.load();
-      } catch { /* ignore */ }
-    };
-
-    const play = () => {
-      if (!entryReady || !inView || waitingLoop || reducedMotion.matches || document.hidden) {
-        video.autoplay = false;
+    const playIfAllowed = () => {
+      if (!entryReadyRef.current || !inView || waitingLoop || reducedMotion.matches || document.hidden) {
+        freeze();
         return;
       }
-      ensureBound();
+      if (!bound || !isBoundTo(video, wantRef.current)) return;
       video.autoplay = true;
       if (video.paused) {
         void video.play().catch((error: DOMException) => {
@@ -227,27 +241,81 @@ export function ViewportVideo({
       }
     };
 
-    const nearIo = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      if (poster) {
-        const img = new window.Image();
-        img.decoding = 'async';
-        img.src = poster;
+    const bindToWant = async () => {
+      const want = wantRef.current;
+      if (cancelled) return;
+      if (bound && isBoundTo(video, want) && releaseAttach) {
+        playIfAllowed();
+        return;
       }
-      ensureBound();
-      if (inView) play();
+
+      hide();
+      const token = ++acquireToken;
+      if (!releaseAttach) {
+        releaseAttach = await acquireAttach();
+        if (cancelled || token !== acquireToken) {
+          releaseAttach();
+          releaseAttach = null;
+          return;
+        }
+      }
+
+      if (detachTimer) {
+        clearTimeout(detachTimer);
+        detachTimer = undefined;
+      }
+
+      bound = true;
+      bindGen += 1;
+      video.dataset.bindGen = String(bindGen);
+      video.dataset.want = want;
+      video.preload = 'auto';
+      video.src = want;
+      try {
+        video.load();
+      } catch { /* ignore */ }
+      playIfAllowed();
+    };
+
+    const scheduleDetach = () => {
+      if (detachTimer) clearTimeout(detachTimer);
+      // Short grace so tiny scroll jank doesn't churn; then free the decoder slot.
+      detachTimer = setTimeout(() => {
+        detachTimer = undefined;
+        if (!near && !inView) detach();
+      }, 220);
+    };
+
+    const nearIo = new IntersectionObserver(([entry]) => {
+      near = entry.isIntersecting;
+      if (near) {
+        if (poster) {
+          const img = new window.Image();
+          img.decoding = 'async';
+          img.src = poster;
+        }
+        void bindToWant();
+      } else if (!inView) {
+        freeze();
+        scheduleDetach();
+      }
     }, {
-      rootMargin: isNarrowViewport() ? '280px 0px' : '480px 0px',
+      rootMargin: isNarrowViewport() ? '60px 0px' : '120px 0px',
       threshold: 0,
     });
 
     const viewIo = new IntersectionObserver(([entry]) => {
       inView = entry.isIntersecting;
-      if (inView) play();
-      else freeze();
+      if (inView) {
+        near = true;
+        void bindToWant().then(() => playIfAllowed());
+      } else {
+        freeze();
+        if (!near) scheduleDetach();
+      }
     }, {
-      rootMargin: isNarrowViewport() ? '40px 0px' : '80px 0px',
-      threshold: 0.05,
+      rootMargin: '0px',
+      threshold: 0.01,
     });
 
     const onLoaded = () => armReveal();
@@ -259,7 +327,7 @@ export function ViewportVideo({
       replayTimer = setTimeout(() => {
         waitingLoop = false;
         video.currentTime = 0;
-        play();
+        playIfAllowed();
       }, loopDelayMs);
     };
 
@@ -270,7 +338,7 @@ export function ViewportVideo({
         && !wantRef.current.includes('/mobile/')
         && stripQuery(mobileSrc) !== stripQuery(wantRef.current)
       ) {
-        bound = false;
+        detach();
         setActiveSrc(mobileSrc);
         return;
       }
@@ -279,7 +347,7 @@ export function ViewportVideo({
         && wantRef.current.includes('/mobile/')
         && stripQuery(wantRef.current) !== stripQuery(src)
       ) {
-        bound = false;
+        detach();
         setActiveSrc(src);
       }
     };
@@ -287,7 +355,7 @@ export function ViewportVideo({
     const onVisibility = () => {
       if (reducedMotion.matches) video.controls = true;
       if (document.hidden || reducedMotion.matches) freeze();
-      else if (inView) play();
+      else playIfAllowed();
     };
 
     nearIo.observe(video);
@@ -300,40 +368,13 @@ export function ViewportVideo({
     document.addEventListener('visibilitychange', onVisibility);
     reducedMotion.addEventListener('change', onVisibility);
 
-    if (eager) {
-      if (poster) {
-        const img = new window.Image();
-        img.decoding = 'async';
-        img.src = poster;
-      }
-      if (isSafari() || isNarrowViewport()) {
-        void enqueueSafariEagerBind(() => {
-          if (!cancelled) ensureBound();
-          return new Promise<void>((resolve) => {
-            if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && isBoundTo(video, wantRef.current)) {
-              resolve();
-              return;
-            }
-            const done = () => {
-              video.removeEventListener('loadeddata', done);
-              video.removeEventListener('error', done);
-              window.clearTimeout(timer);
-              resolve();
-            };
-            const timer = window.setTimeout(done, 10000);
-            video.addEventListener('loadeddata', done);
-            video.addEventListener('error', done);
-          });
-        });
-      } else {
-        ensureBound();
-      }
-    }
+    if (eager) void bindToWant();
 
     return () => {
       cancelled = true;
+      acquireToken += 1;
       if (replayTimer) clearTimeout(replayTimer);
-      if (revealFallback) clearTimeout(revealFallback);
+      if (detachTimer) clearTimeout(detachTimer);
       const rvfc = video as HTMLVideoElement & { cancelVideoFrameCallback?: (id: number) => void };
       if (frameCallbackId !== undefined && typeof rvfc.cancelVideoFrameCallback === 'function') {
         rvfc.cancelVideoFrameCallback(frameCallbackId);
@@ -347,9 +388,31 @@ export function ViewportVideo({
       video.removeEventListener('error', onError);
       document.removeEventListener('visibilitychange', onVisibility);
       reducedMotion.removeEventListener('change', onVisibility);
-      freeze();
+      detach();
     };
-  }, [activeSrc, src, mobile, mobileSrc, loopDelayMs, poster, entryReady, eager]);
+  }, [activeSrc, src, mobile, mobileSrc, loopDelayMs, poster, eager]);
+
+  // Play gate only — must not rebind / clear src when the entry loader finishes.
+  useEffect(() => {
+    entryReadyRef.current = entryReady;
+    const video = ref.current;
+    if (!video) return;
+    if (!entryReady) {
+      video.autoplay = false;
+      if (!video.paused) video.pause();
+      return;
+    }
+    const rect = video.getBoundingClientRect();
+    const visible = rect.bottom > 40 && rect.top < window.innerHeight - 40;
+    if (
+      visible
+      && isBoundTo(video, wantRef.current)
+      && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+    ) {
+      video.autoplay = true;
+      void video.play().catch(() => { /* ignore */ });
+    }
+  }, [entryReady]);
 
   return (
     <span className={`case-video${ready ? ' is-ready' : ''}${poster ? ' has-poster' : ''}`}>
