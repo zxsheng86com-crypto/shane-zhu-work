@@ -6,13 +6,20 @@ import { Header, projects } from '../../site';
 import { CaseDescription } from './case-description';
 import { RevealFlow } from './reveal-flow';
 import { ViewportVideo } from './viewport-video';
-import { CaseStill, mobileStillSrc } from './case-still';
+import { CaseStill } from './case-still';
 import type { CSSProperties } from 'react';
 import mediaDimensions from '../../media-dimensions.json';
 import { Localized } from '../../localized';
 import { CaseProjectPrefetch } from '../../project-prefetch';
 import { shouldPriorityCaseSlot } from '../../project-opening';
 import { CaseEntryGate } from './case-entry-gate';
+
+function mobileStillSrc(src: string) {
+  const q = src.includes('?') ? src.slice(src.indexOf('?')) : '';
+  const bare = src.split('?')[0];
+  if (!bare.endsWith('.jpg')) return undefined;
+  return `${bare.replace(/\/([^/]+)$/, '/mobile/$1')}${q}`;
+}
 
 export function generateStaticParams() {
   return projects.map(({ slug }) => ({ slug }));
