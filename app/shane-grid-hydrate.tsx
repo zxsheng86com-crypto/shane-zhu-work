@@ -1,18 +1,23 @@
 'use client';
 
 import { useEffect } from 'react';
-import { clearShaneGrid, hydrateShaneGrid } from './shane-grid';
+import { applyShaneGrid, hydrateShaneGrid } from './shane-grid';
 
-/** Apply last homepage-measured Shane gutters on mobile routes only. */
+/**
+ * Keep Shane gutters stable across routes.
+ * Mobile: restore last measured grid from session.
+ * Desktop: apply design FALLBACK when nothing is ready yet (never clear mid-session).
+ */
 export function ShaneGridHydrate() {
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 800px)');
     const sync = () => {
       if (mq.matches) {
-        hydrateShaneGrid();
-      } else {
-        // Leaving mobile width: drop phone inline gutters so desktop CSS tokens win.
-        clearShaneGrid();
+        if (!hydrateShaneGrid()) applyShaneGrid();
+        return;
+      }
+      if (document.documentElement.dataset.shaneGrid !== 'ready') {
+        applyShaneGrid();
       }
     };
     sync();

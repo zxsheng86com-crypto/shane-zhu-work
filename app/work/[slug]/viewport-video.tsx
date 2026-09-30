@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useCaseEntryReady } from './case-entry-gate';
 
 export const videoLoopDelays: Record<string, number> = {
   '/media/dji-aura/04.mp4': 1000,
@@ -78,6 +79,7 @@ export function ViewportVideo({
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const loopDelayMs = Math.max(0, videoLoopDelays[stripQuery(src)] ?? 0);
+  const entryReady = useCaseEntryReady();
   const mobileSrc = withQuery(src.replace(/\/([^/?]+)(\?.*)?$/, '/mobile/$1'), src);
 
   const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, mobile));
@@ -97,7 +99,7 @@ export function ViewportVideo({
 
   useEffect(() => {
     const video = ref.current;
-    if (!video || typeof IntersectionObserver === 'undefined') return;
+    if (!entryReady || !video || typeof IntersectionObserver === 'undefined') return;
 
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
     const phone = () => isNarrowViewport();
@@ -329,7 +331,7 @@ export function ViewportVideo({
       hide();
       clearSrc();
     };
-  }, [activeSrc, src, mobile, loopDelayMs, poster]);
+  }, [activeSrc, src, mobile, loopDelayMs, poster, entryReady]);
 
   return (
     <span className={`case-video${ready ? ' is-ready' : ''}${poster ? ' has-poster' : ''}`}>

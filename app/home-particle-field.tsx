@@ -71,10 +71,21 @@ function compileShader(gl: WebGL2RenderingContext, type: number, source: string)
   return shader;
 }
 
-export function HomeParticleField({ onReady }: { onReady?: () => void }) {
+export function HomeParticleField({
+  onReady,
+  onProgress,
+}: {
+  onReady?: () => void;
+  /** 0–100 while galaxy download + particle boot run. */
+  onProgress?: (value: number) => void;
+}) {
   const fieldRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const onReadyRef = useRef(onReady);
+  const onProgressRef = useRef(onProgress);
+  onReadyRef.current = onReady;
+  onProgressRef.current = onProgress;
 
   useEffect(() => {
     const field = fieldRef.current;
@@ -91,11 +102,21 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
     // Mobile: stronger twinkle replaces removed gyro life.
     const twinkleAmount = quiet ? 0 : isMobile ? 2.8 : 1;
     const sampleCols = isMobile ? 280 : window.matchMedia('(max-width: 1199px)').matches ? 280 : 460;
+    const galaxyUrl = isMobile ? '/media/home-galaxy-mobile.jpg' : '/media/home-galaxy.jpg';
 
     let gl: WebGL2RenderingContext | null = null;
     let frame = 0;
     let visible = false;
     let destroyed = false;
+    let blobUrl: string | undefined;
+    let lastProgress = -1;
+    const reportProgress = (value: number) => {
+      const next = Math.max(0, Math.min(100, Math.round(value)));
+      if (next <= lastProgress) return;
+      lastProgress = next;
+      onProgressRef.current?.(next);
+    };
+    reportProgress(2);
     let pointerX = 0;
     let pointerY = 0;
     let targetX = 0;
@@ -117,8 +138,7 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
     const yLift = isMobile ? 0.04 : 0.28;
     let startTime = 0;
     let lastTime = 0;
-    let initTimer = 0;
-
+    
     const resize = () => {
       if (!gl) return;
       const rect = field.getBoundingClientRect();
@@ -190,7 +210,8 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
       if (readyNotified) return;
       readyNotified = true;
       window.clearTimeout(readyWatchdog);
-      onReady?.();
+      reportProgress(100);
+      onReadyRef.current?.();
     };
     // Never reveal the sampling photo — black hero if WebGL stalls.
     const showFallback = () => {
@@ -198,11 +219,13 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
       field.classList.remove('is-ready');
       reportReady();
     };
-    readyWatchdog = window.setTimeout(showFallback, isMobile ? 4000 : 6000);
+    readyWatchdog = window.setTimeout(showFallback, isMobile ? 8000 : 12000);
+    const yieldFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-    const initialize = () => {
+    const initialize = async () => {
       try {
         if (destroyed || !image.naturalWidth) return;
+        reportProgress(48);
 
         gl = canvas.getContext('webgl2', { alpha: true, antialias: false, depth: false, powerPreference: 'low-power' });
         if (!gl) return showFallback();
@@ -223,6 +246,7 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
           return showFallback();
         }
 
+        reportProgress(55);
         const cols = sampleCols;
         const rows = Math.max(1, Math.round(cols * image.naturalHeight / image.naturalWidth));
         const sample = document.createElement('canvas');
@@ -247,6 +271,11 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
             }
             luminance[y * cols + x] = max;
             if (max > maxLuminance) maxLuminance = max;
+          }
+          if (y % 28 === 0) {
+            reportProgress(55 + (y / rows) * 10);
+            await yieldFrame();
+            if (destroyed) return;
           }
         }
 
@@ -293,7 +322,13 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
               points.push(px, py, (midLayer + 0.5) / LAYERS, size, alpha, random());
             }
           }
+          if (y % 20 === 0) {
+            reportProgress(65 + (y / rows) * 25);
+            await yieldFrame();
+            if (destroyed) return;
+          }
         }
+        reportProgress(92);
         count = points.length / 6;
         if (!count) return showFallback();
 
@@ -322,6 +357,7 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
         gl.clearColor(0, 0, 0, 0);
         resize();
+        reportProgress(98);
         field.classList.remove('is-fallback');
         field.classList.add('is-ready');
         reportReady();
@@ -357,29 +393,56 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
     }
     reducedMotion.addEventListener('change', onMotionPreferenceChange);
 
-    const scheduleInit = () => {
-      if (destroyed) return;
-      initTimer = window.setTimeout(() => {
-        if (!destroyed) initialize();
-      }, isMobile ? 280 : 0);
+    const boot = async () => {
+      try {
+        reportProgress(4);
+        const response = await fetch(galaxyUrl, { cache: 'force-cache' });
+        if (!response.ok) throw new Error('galaxy fetch failed');
+        const total = Number(response.headers.get('content-length') || 0);
+        const reader = response.body?.getReader();
+        let blob: Blob;
+        if (reader) {
+          const chunks: Uint8Array[] = [];
+          let received = 0;
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) {
+              chunks.push(value);
+              received += value.byteLength;
+              if (total > 0) reportProgress(4 + (received / total) * 40);
+              else reportProgress(Math.min(42, 4 + chunks.length * 2));
+            }
+            if (destroyed) return;
+          }
+          blob = new Blob(chunks as BlobPart[]);
+        } else {
+          blob = await response.blob();
+        }
+        if (destroyed) return;
+        reportProgress(46);
+        blobUrl = URL.createObjectURL(blob);
+        await new Promise<void>((resolve, reject) => {
+          image.onload = () => resolve();
+          image.onerror = () => reject(new Error('galaxy decode failed'));
+          image.src = blobUrl!;
+        });
+        if (destroyed) return;
+        reportProgress(48);
+        await initialize();
+      } catch {
+        if (!destroyed) showFallback();
+      }
     };
-    const onImageError = () => {
-      if (!destroyed) showFallback();
-    };
-    if (image.complete && image.naturalWidth) {
-      scheduleInit();
-    } else {
-      image.addEventListener('load', scheduleInit, { once: true });
-      image.addEventListener('error', onImageError, { once: true });
-    }
+    void boot();
 
     return () => {
       destroyed = true;
       window.clearTimeout(readyWatchdog);
-      window.clearTimeout(initTimer);
       cancelAnimationFrame(frame);
-      image.removeEventListener('load', scheduleInit);
-      image.removeEventListener('error', onImageError);
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      image.onload = null;
+      image.onerror = null;
       observer.disconnect();
       resizeObserver.disconnect();
       if (pointerInteractive) {
@@ -394,17 +457,8 @@ export function HomeParticleField({ onReady }: { onReady?: () => void }) {
   }, []);
 
   return <div ref={fieldRef} className="cf-hero-particles">
-    <picture aria-hidden="true">
-      <source media="(min-width: 801px)" srcSet="/media/home-galaxy.jpg" />
-      {/* eslint-disable-next-line @next/next/no-img-element -- sampling source for WebGL only; never shown */}
-      <img
-        ref={imageRef}
-        src="/media/home-galaxy-mobile.jpg"
-        alt=""
-        draggable={false}
-        decoding="async"
-      />
-    </picture>
+    {/* eslint-disable-next-line @next/next/no-img-element -- sampling source for WebGL only; never shown */}
+    <img ref={imageRef} alt="" draggable={false} decoding="async" aria-hidden="true" />
     <canvas ref={canvasRef} aria-hidden="true" />
   </div>;
 }

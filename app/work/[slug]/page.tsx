@@ -11,6 +11,7 @@ import type { CSSProperties } from 'react';
 import mediaDimensions from '../../media-dimensions.json';
 import { Localized } from '../../localized';
 import { CaseProjectPrefetch } from '../../project-prefetch';
+import { CaseEntryGate } from './case-entry-gate';
 
 export function generateStaticParams() {
   return projects.map(({ slug }) => ({ slug }));
@@ -105,7 +106,8 @@ export default async function Project({ params }: { params: Promise<{ slug: stri
   return <>
     <Header />
     <CaseProjectPrefetch slug={slug} />
-    <main className="case-study">
+    <CaseEntryGate slug={slug}>
+    <main className="case-study" data-case-entry="">
       <header className="case-hero">
         <div><p><Localized en={project.titleEn ?? project.title} zh={project.title} /></p><h1><Localized en={project.textEn} zh={project.text} /></h1></div>
         <dl className="case-meta">
@@ -295,5 +297,6 @@ export default async function Project({ params }: { params: Promise<{ slug: stri
 
       <section className="next-project"><p><Localized en="Next project" zh="下一个项目" /></p><Link href={`/work/${next.slug}`}><Localized en={next.titleEn ?? next.title} zh={next.title} /><span>↗</span></Link></section>
     </main>
+    </CaseEntryGate>
   </>;
 }

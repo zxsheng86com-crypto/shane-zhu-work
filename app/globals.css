@@ -1,7 +1,7 @@
 @font-face{font-family:Aspekta;src:url('/fonts/AspektaVF.woff2') format('woff2-variations');font-style:normal;font-weight:50 1000;font-display:swap}
 :root{--bg:#000;--white:#f7f7f7;--muted:#828282;--soft:#999;--line:rgba(255,255,255,.12);--line-soft:rgba(255,255,255,.08);--panel:#27292d;--nav-muted:#828282;--nav-faint:#666;--text-80:rgba(255,255,255,.8);--text-64:rgba(255,255,255,.64);--text-48:rgba(255,255,255,.48);--text-36:rgba(255,255,255,.36);--text-20:rgba(255,255,255,.2);--surface:#151515;--surface-text:rgba(255,255,255,.48);--button-bg:#f7f7f7;--button-text:#121212;--focus:#f7f7f7;--scroll-track:#222;--scroll-thumb:#666;--sg-gutter-left:0.9375vw;--sg-gutter-right:1.868vw;--project-cover-radius:4px;--project-cover-gutter:16px;color-scheme:dark}
 *{box-sizing:border-box}
-html{background:var(--bg)}
+html{background:var(--bg);scrollbar-gutter:stable}
 body{margin:0;background:var(--bg);color:var(--white);font-family:Aspekta,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',Arial,sans-serif;font-size:16px;font-weight:400;line-height:1.2;-webkit-font-smoothing:antialiased}
 .lang-en{font-family:Aspekta,Arial,sans-serif}.lang-zh{display:none!important;font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei',Arial,sans-serif}html[data-lang="zh"] .lang-en{display:none!important}html[data-lang="zh"] .lang-zh{display:inline!important}
 /* CJK face for page content only — nav stays Aspekta so E/Z + Work/About never reflow. */
@@ -20,8 +20,10 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
   html.has-home-cursor,html.has-home-cursor *{cursor:none!important}
 }
 
-/* Site nav — homepage treatment applied globally */
-.nav{position:fixed;z-index:20;top:0;left:0;display:grid;grid-template-columns:auto 1fr;align-items:flex-start;width:100%;height:auto;padding:clamp(14px,1.25vw,30px) var(--sg-gutter-right,29px) clamp(7px,.625vw,15px) var(--sg-gutter-left,29px);background:#000;color:#7d7d7d;font-family:Aspekta,Arial,sans-serif;font-size:clamp(12px,.972vw,26px);font-weight:500;line-height:1;letter-spacing:.2px;transition:opacity .7s ease,background-color .45s cubic-bezier(.22,1,.36,1),color .3s ease}
+/* Site nav — homepage treatment applied globally.
+   Padding uses fixed FALLBACK gutters (not live --sg-*), so Work/About/E·Z
+   do not jump when route changes clear/remeasure the Shane grid. */
+.nav{position:fixed;z-index:20;top:0;left:0;display:grid;grid-template-columns:auto 1fr;align-items:flex-start;width:100%;height:auto;padding:clamp(14px,1.25vw,30px) 1.868% clamp(7px,.625vw,15px) .9375%;background:#000;color:#7d7d7d;font-family:Aspekta,Arial,sans-serif;font-size:clamp(12px,.972vw,26px);font-weight:500;line-height:1;letter-spacing:.2px;transition:opacity .7s ease,background-color .45s cubic-bezier(.22,1,.36,1),color .3s ease}
 .nav,.nav *{font-family:Aspekta,Arial,sans-serif}
 .nav-hidden{transform:none}
 .nav-identity{display:flex;align-items:center;gap:10px}
@@ -231,7 +233,7 @@ html[data-lang="zh"] .case-text>.case-desc>.lang-zh{display:block!important}
     grid-template-columns:1fr auto;
     grid-template-rows:auto auto;
     align-items:center;
-    padding:0 var(--sg-gutter-right,18px) 0 var(--sg-gutter-left,18px);
+    padding:0 18px;
     border:0;border-radius:0;background:#000;color:#7d7d7d;box-shadow:none;
   }
   .nav-home .nav-identity{
@@ -422,16 +424,12 @@ body:has(.cf-home){background:#000;color:#fff;color-scheme:dark}
 .cf-home[data-intro-phase='particles'] .cf-wordmark.is-font-fallback:not(.is-lottie-on) span,
 .cf-home[data-intro-phase='complete'] .cf-wordmark.is-font-fallback:not(.is-lottie-on) span{opacity:1;transform:none}
 @keyframes cf-rise{to{opacity:1;transform:translateY(0)}}
-.cf-intro-loader{position:fixed;z-index:120;inset:0;display:flex;align-items:center;justify-content:center;background:#000;opacity:1;visibility:visible;pointer-events:auto;animation:cf-loader-shell-dismiss .55s ease 1.25s forwards}
-.cf-intro-loader.is-hidden{opacity:0!important;visibility:hidden!important;pointer-events:none!important;animation:none}
+.cf-intro-loader{position:fixed;z-index:120;inset:0;display:flex;align-items:center;justify-content:center;background:#000;opacity:1;visibility:visible;pointer-events:auto;transition:opacity .55s ease,visibility .55s ease}
+.cf-intro-loader.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
 .cf-loader-bar{position:relative;overflow:hidden;width:min(160px,28vw);height:1px;background:rgba(255,255,255,.12)}
-.cf-loader-bar-fill{position:absolute;inset:0;display:block;background:#7d7d7d;transform:scaleX(0);transform-origin:left center;will-change:transform}
-.cf-home[data-intro-phase='loading'] .cf-loader-bar-fill{animation:cf-loader-run 1.15s linear forwards}
-@keyframes cf-loader-run{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-@keyframes cf-loader-shell-dismiss{to{opacity:0;visibility:hidden;pointer-events:none}}
+.cf-loader-bar-fill{position:absolute;inset:0;display:block;background:#7d7d7d;transform:scaleX(0);transform-origin:left center;will-change:transform;transition:transform .18s linear}
 @media(prefers-reduced-motion:reduce){
-  .cf-home[data-intro-phase='loading'] .cf-loader-bar-fill{animation-duration:.01ms;animation-delay:0s}
-  .cf-intro-loader{animation-delay:.05s}
+  .cf-intro-loader,.cf-loader-bar-fill{transition:none}
 }
 .cf-hero-meta{position:absolute;z-index:5;inset:auto 0 8px;display:block;margin:0;padding:0;font-family:Aspekta,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',Arial,sans-serif;font-size:clamp(10px,1.19vw,15px);font-weight:500;letter-spacing:.14em;text-transform:uppercase;pointer-events:none;user-select:none;opacity:0;transition:opacity .75s ease}
 .cf-home[data-intro-phase='particles'] .cf-hero-meta,.cf-home[data-intro-phase='complete'] .cf-hero-meta{opacity:1}
@@ -445,6 +443,7 @@ body:has(.cf-home[data-intro-gate][data-intro-phase='loading']) .nav,
 body:has(.cf-home[data-intro-gate][data-intro-phase='wordmark']) .nav,
 body:has(.cf-home[data-intro-gate][data-intro-phase='particles']) .nav{opacity:0;pointer-events:none;transition:opacity .7s ease}
 body:has(.cf-home[data-intro-phase='complete']) .nav{opacity:1;pointer-events:auto}
+body:has(.case-entry-loader:not(.is-hidden)) .nav{opacity:0;pointer-events:none}
 .cf-statement{position:relative;min-height:100svh;padding:22svh var(--sg-gutter-right,29px) 26svh var(--sg-gutter-left,29px);background:#000}
 .cf-statement h2{max-width:20ch;margin:0;font-size:clamp(30px,4.4vw,62px);font-weight:500;line-height:1.2;letter-spacing:-.03em}
 /* extra room inside the mask so descenders (g, y, p) are not clipped */

@@ -316,8 +316,7 @@ export function startShaneGrid(hero: HTMLElement) {
     window.removeEventListener('cf-shane-grid-sync', sync);
     mq.removeEventListener('change', sync);
     retries.forEach((id) => window.clearTimeout(id));
-    // Mobile: keep measured gutters for other routes. Desktop: clear so CSS tokens win.
-    if (!isMobileViewport()) clearShaneGrid();
+    // Keep gutters on :root across routes so chrome (nav) and case pages don't jump.
     removeDebugOverlay();
   };
 }

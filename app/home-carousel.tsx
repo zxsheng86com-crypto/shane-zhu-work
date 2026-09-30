@@ -21,16 +21,26 @@ export function HomeCarousel() {
   const lottieRef = useRef<HTMLDivElement>(null);
   const [statementVisible, setStatementVisible] = useState(false);
   const [lottieReady, setLottieReady] = useState(false);
-  const [fontFallback, setFontFallback] = useState(false);
   const [introPhase, setIntroPhase] = useState<'loading' | 'wordmark' | 'particles' | 'complete'>('loading');
-  const [sceneEnabled, setSceneEnabled] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
   const [particlesReady, setParticlesReady] = useState(false);
   // Only after mount: hide nav during intro. Without JS, nav stays visible.
   const [introGate, setIntroGate] = useState(false);
   // ponytail: mount only one cover tree so phones don't download desktop 4MB covers too
   const [coverMode, setCoverMode] = useState<'unknown' | 'desktop' | 'mobile'>('unknown');
   const introPhaseRef = useRef(introPhase);
-  const lottieArmed = introPhase !== 'loading';
+  const loadStartedAt = useRef(0);
+  const particleProgressRef = useRef(0);
+  const lottieProgressRef = useRef(0);
+  const particlesReadyRef = useRef(false);
+  const lottieReadyRef = useRef(false);
+  const playEntranceRef = useRef<(() => void) | null>(null);
+
+  const bumpProgress = () => {
+    const combined = Math.round(particleProgressRef.current * 0.8 + lottieProgressRef.current * 0.2);
+    const capped = particlesReadyRef.current && lottieReadyRef.current ? 100 : Math.min(99, combined);
+    setLoadProgress((prev) => (capped > prev ? capped : prev));
+  };
 
   useEffect(() => {
     introPhaseRef.current = introPhase;
@@ -38,6 +48,7 @@ export function HomeCarousel() {
 
   useEffect(() => {
     setIntroGate(true);
+    loadStartedAt.current = performance.now();
   }, []);
 
   useEffect(() => {
@@ -49,30 +60,36 @@ export function HomeCarousel() {
   }, []);
 
   /* ---- intro phases ----
-     loading   → CSS bar (~1.2s)
-     wordmark  → Shane entrance Lottie (particles mount + init in parallel)
+     loading   → galaxy/particles + Lottie JSON boot together (bar = real progress)
+     wordmark  → play already-loaded Shane entrance
      particles → field opacity fade-in at ~50% of Shane entrance
-     complete  → nav opacity fade-in
-     Hard timeouts so mobile never stays black if WebGL/Lottie stalls. */
+     complete  → nav opacity fade-in */
+  useEffect(() => {
+    if (introPhase !== 'loading' || !particlesReady || !lottieReady) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const hold = reduced ? 40 : Math.max(180, 420 - (performance.now() - loadStartedAt.current));
+    const timer = window.setTimeout(() => setIntroPhase('wordmark'), hold);
+    return () => window.clearTimeout(timer);
+  }, [introPhase, particlesReady, lottieReady]);
+
+  useEffect(() => {
+    if (introPhase !== 'wordmark' || !lottieReady) return;
+    playEntranceRef.current?.();
+  }, [introPhase, lottieReady]);
+
   useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const toWordmark = window.setTimeout(() => {
-      setSceneEnabled(true);
-      setIntroPhase('wordmark');
-    }, reduced ? 80 : 1200);
-    // Absolute safety: never leave the page without a finished intro.
     const forceComplete = window.setTimeout(() => {
-      setSceneEnabled(true);
+      particlesReadyRef.current = true;
+      lottieReadyRef.current = true;
       setParticlesReady(true);
-      setIntroPhase('complete');
-    }, reduced ? 1200 : 5500);
-    return () => {
-      window.clearTimeout(toWordmark);
-      window.clearTimeout(forceComplete);
-    };
+      setLottieReady(true);
+      setLoadProgress(100);
+      setIntroPhase((phase) => (phase === 'complete' ? phase : 'complete'));
+    }, reduced ? 2500 : 16000);
+    return () => window.clearTimeout(forceComplete);
   }, []);
 
-  // Advance to complete once particles are ready — or after a short wait in particles phase.
   useEffect(() => {
     if (introPhase !== 'particles') return;
     const delay = particlesReady ? 700 : 2200;
@@ -80,30 +97,17 @@ export function HomeCarousel() {
     return () => window.clearTimeout(timer);
   }, [introPhase, particlesReady]);
 
-  /* ---- hero wordmark Lottie ---- */
+  /* ---- hero wordmark Lottie: boot during loading, never fall back to fonts ---- */
   useEffect(() => {
-    if (!lottieArmed) return;
     const container = lottieRef.current;
     const hero = heroRef.current;
     if (!container || !hero) return;
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reducedMotion) {
-      setLottieReady(false);
-      setFontFallback(true);
-      const timer = window.setTimeout(() => {
-        setSceneEnabled(true);
-        setIntroPhase('wordmark');
-        window.setTimeout(() => setIntroPhase('particles'), 80);
-      }, 100);
-      return () => window.clearTimeout(timer);
-    }
-
     const isMobile = window.matchMedia('(max-width: 800px), (pointer: coarse)').matches;
     let destroyed = false;
     let cleanupHotzone: (() => void) | undefined;
     let entranceStartTimer = 0;
-    let fallbackTimer = 0;
     const allAnims: import('lottie-web').AnimationItem[] = [];
 
     const WORDMARK_SCALE = 1.6676;
@@ -111,6 +115,7 @@ export function HomeCarousel() {
     const PEAK_FRAME = 30;
     const ENTRANCE_START_MS = 260;
     const PARTICLES_AT_PROGRESS = 0.5;
+    const ENTRANCE_URL = '/lottie/home-entrance-shane.json';
 
     const lettersWrap = document.createElement('div');
     lettersWrap.className = 'cf-letters';
@@ -119,9 +124,26 @@ export function HomeCarousel() {
     entranceWrap.className = 'cf-entrance';
     lettersWrap.appendChild(entranceWrap);
 
+    const markLottieProgress = (value: number) => {
+      const next = Math.max(lottieProgressRef.current, Math.min(100, value));
+      lottieProgressRef.current = next;
+      bumpProgress();
+    };
+
+    const loadJson = async (url: string) => {
+      const response = await fetch(url, { cache: 'force-cache' });
+      if (!response.ok) throw new Error(`Failed to load ${url}`);
+      return response.json();
+    };
+
     (async () => {
-      const { default: lottie } = await import('lottie-web');
+      markLottieProgress(8);
+      const [{ default: lottie }, entranceData] = await Promise.all([
+        import('lottie-web'),
+        loadJson(ENTRANCE_URL),
+      ]);
       if (destroyed) return;
+      markLottieProgress(isMobile ? 70 : 40);
 
       type LetterAnim = { anim: import('lottie-web').AnimationItem; cx: number; t: number };
       const letters: LetterAnim[] = [];
@@ -134,14 +156,11 @@ export function HomeCarousel() {
       let mouseX: number | null = null;
       let sigma = 120;
       let entrance: import('lottie-web').AnimationItem | null = null;
-      let entranceReady = false;
-      let introExpired = false;
+      let played = false;
 
-      // Fade particles once Shane entrance is halfway — don't wait for it to finish.
       const revealParticles = () => {
         if (destroyed || particlesRevealed) return;
         particlesRevealed = true;
-        setSceneEnabled(true);
         if (introPhaseRef.current === 'wordmark') setIntroPhase('particles');
       };
 
@@ -153,9 +172,14 @@ export function HomeCarousel() {
         });
       };
 
-      const startEntrance = () => {
-        if (!entranceReady || !entrance || destroyed || introExpired) return;
-        setLottieReady(true);
+      playEntranceRef.current = () => {
+        if (destroyed || !entrance || played) return;
+        played = true;
+        if (reducedMotion) {
+          entrance.goToAndStop(Math.max(0, entrance.totalFrames - 1), true);
+          revealParticles();
+          return;
+        }
         entranceStartTimer = window.setTimeout(() => {
           if (!destroyed && entrance) entrance.play();
         }, ENTRANCE_START_MS);
@@ -215,7 +239,7 @@ export function HomeCarousel() {
       const onResize = () => { updateSigma(); measure(); };
 
       const startHotzone = () => {
-        if (hotzoneStarted || destroyed || isMobile) return;
+        if (hotzoneStarted || destroyed || isMobile || reducedMotion) return;
         hotzoneStarted = true;
         updateSigma();
         hero.addEventListener('mousemove', onMove);
@@ -238,135 +262,158 @@ export function HomeCarousel() {
         if (entrance) entrance.destroy();
         entrance = null;
         startHotzone();
-        // Safety: if enterFrame never fired, still reveal particles on complete.
         revealParticles();
       };
 
-      /* Mobile: play entrance only, freeze last frame — no letter comps / hover scrub. */
+      const onEntranceReady = () => {
+        if (destroyed || !entrance) return;
+        entrance.goToAndStop(0, true);
+        markLottieProgress(100);
+        lottieReadyRef.current = true;
+        setLottieReady(true);
+        if (introPhaseRef.current === 'wordmark') playEntranceRef.current?.();
+        requestAnimationFrame(() => requestShaneGridSync());
+      };
+
+      /* Mobile: entrance only, freeze last frame — no letter comps / hover scrub. */
       if (isMobile) {
         entrance = lottie.loadAnimation({
           container: entranceWrap,
           renderer: 'svg',
           loop: false,
           autoplay: false,
-          path: '/lottie/home-entrance-shane.json',
+          animationData: entranceData,
         });
         allAnims.push(entrance);
         armParticlesAtHalfway(entrance);
-        entrance.addEventListener('DOMLoaded', () => {
-          if (destroyed) return;
-          entrance!.goToAndStop(0, true);
-          entranceReady = true;
-          startEntrance();
-          requestAnimationFrame(() => requestShaneGridSync());
-        });
+        entrance.addEventListener('DOMLoaded', onEntranceReady);
         entrance.addEventListener('complete', () => {
           if (destroyed || !entrance) return;
           entrance.goToAndStop(entrance.totalFrames - 1, true);
           revealParticles();
           requestAnimationFrame(() => requestShaneGridSync());
         });
-        entrance.addEventListener('data_failed', () => {
-          if (destroyed) return;
-          introExpired = true;
-          setLottieReady(false);
-          setFontFallback(true);
-          fallbackTimer = window.setTimeout(revealParticles, 400);
-        });
-        fallbackTimer = window.setTimeout(() => {
-          if (!destroyed && introPhaseRef.current === 'wordmark' && !entranceReady) {
-            introExpired = true;
-            setLottieReady(false);
-            setFontFallback(true);
-            revealParticles();
-          }
-        }, 3200);
         return;
       }
 
-      /* Desktop: entrance → letter comps + pointer scrub */
-      LETTER_FILES.forEach((name) => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'cf-letter';
-        lettersWrap.appendChild(wrapper);
-        const anim = lottie.loadAnimation({
-          container: wrapper,
-          renderer: 'svg',
-          loop: false,
-          autoplay: false,
-          path: `/lottie/letters/${name}.json`,
-        });
-        allAnims.push(anim);
-        letters.push({ anim, cx: 0, t: 0 });
-        anim.addEventListener('DOMLoaded', () => {
-          if (destroyed) return;
-          anim.goToAndStop(0, true);
-          readyCount += 1;
-          if (readyCount === LETTER_FILES.length) {
-            updateSigma();
-            measure();
-            measure();
-            handoffDesktop();
-          }
-        });
-      });
-
+      /* Desktop: mount entrance first so the gate can open; letter comps load in parallel. */
       entrance = lottie.loadAnimation({
         container: entranceWrap,
         renderer: 'svg',
         loop: false,
         autoplay: false,
-        path: '/lottie/home-entrance-shane.json',
+        animationData: entranceData,
       });
       allAnims.push(entrance);
       armParticlesAtHalfway(entrance);
-      entrance.addEventListener('DOMLoaded', () => {
-        if (destroyed) return;
-        entrance!.goToAndStop(0, true);
-        entranceReady = true;
-        startEntrance();
-      });
+      entrance.addEventListener('DOMLoaded', onEntranceReady);
       entrance.addEventListener('complete', () => {
         if (destroyed) return;
         entranceDone = true;
         handoffDesktop();
       });
-      entrance.addEventListener('data_failed', () => {
+
+      void Promise.all(
+        LETTER_FILES.map(async (name, index) => {
+          const data = await loadJson(`/lottie/letters/${name}.json`);
+          markLottieProgress(40 + ((index + 1) / LETTER_FILES.length) * 35);
+          return { name, data };
+        }),
+      ).then((letterDatas) => {
         if (destroyed) return;
-        introExpired = true;
-        entranceReady = false;
-        setLottieReady(false);
-        setFontFallback(true);
-        fallbackTimer = window.setTimeout(revealParticles, 1500);
+        letterDatas.forEach(({ data }, index) => {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'cf-letter';
+          lettersWrap.appendChild(wrapper);
+          const anim = lottie.loadAnimation({
+            container: wrapper,
+            renderer: 'svg',
+            loop: false,
+            autoplay: false,
+            animationData: data,
+          });
+          allAnims.push(anim);
+          letters.push({ anim, cx: 0, t: 0 });
+          anim.addEventListener('DOMLoaded', () => {
+            if (destroyed) return;
+            anim.goToAndStop(0, true);
+            readyCount += 1;
+            if (readyCount === LETTER_FILES.length) {
+              updateSigma();
+              measure();
+              measure();
+              handoffDesktop();
+            }
+          });
+        });
       });
-      fallbackTimer = window.setTimeout(() => {
-        if (!destroyed && introPhaseRef.current === 'wordmark' && !entranceReady) {
-          introExpired = true;
-          setLottieReady(false);
-          setFontFallback(true);
-          revealParticles();
-        }
-      }, 4000);
     })().catch(() => {
-      if (!destroyed) {
-        setLottieReady(false);
-        setFontFallback(true);
-        fallbackTimer = window.setTimeout(() => {
-          setSceneEnabled(true);
-          setIntroPhase('particles');
-        }, 800);
-      }
+      // Keep trying once — still no font fallback.
+      if (destroyed) return;
+      void (async () => {
+        try {
+          markLottieProgress(20);
+          const [{ default: lottie }, entranceData] = await Promise.all([
+            import('lottie-web'),
+            loadJson(ENTRANCE_URL),
+          ]);
+          if (destroyed) return;
+          entranceWrap.replaceChildren();
+          const entrance = lottie.loadAnimation({
+            container: entranceWrap,
+            renderer: 'svg',
+            loop: false,
+            autoplay: false,
+            animationData: entranceData,
+          });
+          allAnims.push(entrance);
+          playEntranceRef.current = () => {
+            if (destroyed || !entrance) return;
+            if (reducedMotion) {
+              entrance.goToAndStop(Math.max(0, entrance.totalFrames - 1), true);
+              if (introPhaseRef.current === 'wordmark') setIntroPhase('particles');
+              return;
+            }
+            entranceStartTimer = window.setTimeout(() => {
+              if (!destroyed) entrance.play();
+            }, ENTRANCE_START_MS);
+          };
+          entrance.addEventListener('DOMLoaded', () => {
+            if (destroyed) return;
+            entrance.goToAndStop(0, true);
+            markLottieProgress(100);
+            lottieReadyRef.current = true;
+            setLottieReady(true);
+            if (introPhaseRef.current === 'wordmark') playEntranceRef.current?.();
+          });
+          entrance.addEventListener('complete', () => {
+            if (destroyed) return;
+            entrance.goToAndStop(entrance.totalFrames - 1, true);
+            if (introPhaseRef.current === 'wordmark') setIntroPhase('particles');
+          });
+          entrance.addEventListener('enterFrame', () => {
+            if (destroyed || introPhaseRef.current !== 'wordmark') return;
+            const total = Math.max(1, entrance.totalFrames - 1);
+            if (entrance.currentFrame / total >= PARTICLES_AT_PROGRESS) setIntroPhase('particles');
+          });
+        } catch {
+          // Last resort: still do not use fonts — advance so the page is usable.
+          markLottieProgress(100);
+          lottieReadyRef.current = true;
+          setLottieReady(true);
+        }
+      })();
     });
 
     return () => {
       destroyed = true;
+      playEntranceRef.current = null;
       window.clearTimeout(entranceStartTimer);
-      window.clearTimeout(fallbackTimer);
       cleanupHotzone?.();
       allAnims.forEach((anim) => anim.destroy());
       container.replaceChildren();
     };
-  }, [lottieArmed]);
+  }, []);
 
   useEffect(() => {
     const statement = statementRef.current;
@@ -463,14 +510,30 @@ export function HomeCarousel() {
   return <main className="cf-home" data-intro-phase={introPhase} {...(introGate ? { 'data-intro-gate': '' } : {})} aria-label="Selected work">
     <HomeProjectPrefetch enabled={introPhase === 'complete'} />
     <section ref={heroRef} className="cf-hero" aria-label="Shane Zhu">
-      {sceneEnabled ? <HomeParticleField onReady={() => setParticlesReady(true)} /> : null}
-      <h1 className={`cf-wordmark${lottieReady ? ' is-lottie-on' : ''}${fontFallback ? ' is-font-fallback' : ''}`} aria-label="Shane">
-        {'SHANE'.split('').map((character, index) => <span key={`${character}-${index}`} style={{ animationDelay: `${0.3 + index * 0.05}s` }}>{character === ' ' ? '\u00a0' : character}</span>)}
-      </h1>
+      <HomeParticleField
+        onProgress={(value) => {
+          particleProgressRef.current = Math.max(particleProgressRef.current, value);
+          bumpProgress();
+        }}
+        onReady={() => {
+          particleProgressRef.current = 100;
+          particlesReadyRef.current = true;
+          setParticlesReady(true);
+          bumpProgress();
+        }}
+      />
+      <h1 className={`cf-wordmark${lottieReady ? ' is-lottie-on' : ''}`} aria-label="Shane" />
       <div ref={lottieRef} className="cf-wordmark-lottie" aria-hidden="true" />
-      <div className={`cf-intro-loader${introPhase === 'loading' ? '' : ' is-hidden'}`} aria-hidden="true">
-        <div className="cf-loader-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuetext="Loading">
-          <i className="cf-loader-bar-fill" />
+      <div className={`cf-intro-loader${introPhase === 'loading' ? '' : ' is-hidden'}`} aria-hidden={introPhase !== 'loading'}>
+        <div
+          className="cf-loader-bar"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={loadProgress}
+          aria-valuetext={`${loadProgress}%`}
+        >
+          <i className="cf-loader-bar-fill" style={{ transform: `scaleX(${Math.max(loadProgress, 2) / 100})` }} />
         </div>
       </div>
       <p className="cf-hero-meta">
