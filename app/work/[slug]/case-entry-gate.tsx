@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { loadCaseEntryPack, warmCaseLookahead } from '../../project-opening';
+import { loadCaseEntryPack } from '../../project-opening';
 
 const CaseEntryContext = createContext(true);
 
@@ -47,7 +47,6 @@ export function CaseEntryGate({ slug, children }: { slug: string; children: Reac
       finishTimer = window.setTimeout(() => {
         if (!cancelled) {
           setReady(true);
-          void warmCaseLookahead(slug);
         }
       }, 420);
     };

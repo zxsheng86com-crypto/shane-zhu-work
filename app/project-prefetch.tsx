@@ -7,7 +7,6 @@ import {
   markUrlWarmed,
   nextProjectSlug,
   projectChain,
-  warmOpeningChain,
   warmOpeningPack,
 } from './project-opening';
 
@@ -77,17 +76,12 @@ async function warmNextWhenQuiet(slug: string, prefetchRoute: (href: string) => 
 }
 
 /**
- * Site-wide entry prefetch (Home / Work / About).
- * Idle time is used on purpose: warm opening packs so case entry feels instant.
- * Traffic is accepted; only saveData / 2G still opt out (OS-level user intent).
+ * Warm the first project on desktop idle, and other projects on user intent.
  */
 export function HomeProjectPrefetch({
   enabled = true,
-  /** When true (e.g. About), keep walking the full chain while the page is idle. */
-  chainWhileIdle = false,
 }: {
   enabled?: boolean;
-  chainWhileIdle?: boolean;
 }) {
   const router = useRouter();
   const armed = useRef(false);
@@ -105,39 +99,12 @@ export function HomeProjectPrefetch({
     };
 
     const stopIdle = whenIdle(() => {
-      if (chainWhileIdle) {
-        void warmOpeningChain(prefetchRoute);
-        return;
+      if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        void warmOpeningPack(projectChain[0], prefetchRoute);
       }
-      void warmOpeningPack(projectChain[0], prefetchRoute).then(() => {
-        // After the likely-first case is ready, keep filling the rest in the background.
-        void warmOpeningChain(prefetchRoute, projectChain[1]);
-      });
     }, 2000);
 
     const links = [...document.querySelectorAll<HTMLAnchorElement>('a[href^="/work/"]')];
-    const visibleQueue: string[] = [];
-    const queued = new Set<string>();
-    let pumping = false;
-
-    const pumpVisible = async () => {
-      if (pumping) return;
-      pumping = true;
-      while (visibleQueue.length && networkAllowsPrefetch()) {
-        const slug = visibleQueue.shift();
-        if (!slug) continue;
-        await warmOpeningPack(slug, prefetchRoute);
-      }
-      pumping = false;
-    };
-
-    const enqueueVisible = (slug: string) => {
-      if (queued.has(slug)) return;
-      queued.add(slug);
-      visibleQueue.push(slug);
-      void pumpVisible();
-    };
-
     const cleanups = links.map((link) => {
       let timer: number | undefined;
       const href = link.getAttribute('href') ?? '';
@@ -161,21 +128,12 @@ export function HomeProjectPrefetch({
       // Touch / trackpad press: start before navigation commits.
       link.addEventListener('pointerdown', bump);
 
-      let observer: IntersectionObserver | undefined;
-      if (typeof IntersectionObserver !== 'undefined') {
-        observer = new IntersectionObserver(([entry]) => {
-          if (entry.isIntersecting) enqueueVisible(slug);
-        }, { rootMargin: '80px 0px', threshold: 0.2 });
-        observer.observe(link);
-      }
-
       return () => {
         leave();
         link.removeEventListener('pointerenter', enter);
         link.removeEventListener('pointerleave', leave);
         link.removeEventListener('focus', bump);
         link.removeEventListener('pointerdown', bump);
-        observer?.disconnect();
       };
     });
 

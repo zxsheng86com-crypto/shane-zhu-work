@@ -4,7 +4,7 @@ import { HomeProjectPrefetch } from '../project-prefetch';
 export default function Work() {
   return <>
     <Header />
-    <HomeProjectPrefetch chainWhileIdle />
+    <HomeProjectPrefetch />
     <main className="work-index">
       <ProjectGrid />
     </main>

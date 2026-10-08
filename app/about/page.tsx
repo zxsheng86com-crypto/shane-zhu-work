@@ -46,7 +46,7 @@ const experience = [
 export default function About() {
   return <>
     <Header />
-    <HomeProjectPrefetch chainWhileIdle />
+    <HomeProjectPrefetch />
     <main className="about-reference">
       <section className="about-intro about-reference-grid">
         <div className="about-reference-label"><Localized en="Introduction" zh="介绍" /></div>

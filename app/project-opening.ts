@@ -21,9 +21,7 @@ export const projectChain = [
 export type ProjectSlug = (typeof projectChain)[number];
 
 /** How many media slots the entry progress gate must finish (stills + posters). */
-export const CASE_ENTRY_SLOTS = 6;
-/** Extra slots to warm once the page is open (while viewing the top). */
-export const CASE_LOOKAHEAD_SLOTS = 2;
+export const CASE_ENTRY_SLOTS = 1;
 
 type CaseCatalog = {
   slug: ProjectSlug;
@@ -164,7 +162,6 @@ export const openingPacks: Record<ProjectSlug, OpeningPack> = {
 const warmed = new Set<string>();
 const warmingImages = new Map<string, Promise<void>>();
 const warming = new Map<string, Promise<void>>();
-const lookaheadWarming = new Map<string, Promise<void>>();
 let prefetchGate: Promise<void> = Promise.resolve();
 
 function mediaKey(url: string) {
@@ -267,16 +264,6 @@ export function warmOpeningPack(slug: string, prefetchRoute?: (href: string) => 
   return task;
 }
 
-export async function warmOpeningChain(prefetchRoute?: (href: string) => void, fromSlug?: string) {
-  const start = fromSlug ? projectChain.indexOf(fromSlug as ProjectSlug) : 0;
-  const offset = start < 0 ? 0 : start;
-  for (const slug of projectChain.slice(offset)) {
-    if (!networkAllowsPrefetch()) return;
-    if (isPageScrolling()) await waitForScrollIdle();
-    await warmOpeningPack(slug, prefetchRoute);
-  }
-}
-
 export function openingPackWarmed(slug: string) {
   if (!isProjectSlug(slug)) return false;
   const pack = openingPacks[slug];
@@ -291,15 +278,6 @@ export function markUrlWarmed(url: string) {
 
 function stripQuery(url: string) {
   return url.split('?')[0];
-}
-
-function entryVideoUrl(desktopUrl: string) {
-  if (typeof window === 'undefined') return desktopUrl;
-  if (!window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches) return desktopUrl;
-  const path = stripQuery(desktopUrl);
-  const mobilePath = path.replace(/\/([^/]+)$/, '/mobile/$1');
-  if (mobilePath === path) return desktopUrl;
-  return desktopUrl.replace(path, mobilePath);
 }
 
 function loadImageProgress(url: string, onShare: (ratio: number) => void) {
@@ -327,7 +305,7 @@ function entryImageUrl(desktopUrl: string) {
 }
 
 /**
- * Entry gate loads stills + video posters for slots 01–06 only.
+ * Entry gate loads only the opening still or video poster.
  * On phones, prefer /mobile/*.webp so we do not pull multi‑MB desktop masters.
  */
 export async function loadCaseEntryPack(slug: string, onProgress?: (value: number) => void) {
@@ -364,34 +342,6 @@ export async function loadCaseEntryPack(slug: string, onProgress?: (value: numbe
     });
   }
   onProgress?.(100);
-}
-
-export function warmCaseLookahead(slug: string) {
-  if (!isProjectSlug(slug)) return Promise.resolve();
-  const existing = lookaheadWarming.get(slug);
-  if (existing) return existing;
-
-  const from = CASE_ENTRY_SLOTS + 1;
-  const to = CASE_ENTRY_SLOTS + CASE_LOOKAHEAD_SLOTS;
-  const items = caseMediaRange(slug, from, to);
-  if (!items.length) return Promise.resolve();
-
-  const task = (async () => {
-    for (const item of items) {
-      if (!networkAllowsPrefetch()) return;
-      if (item.kind === 'video') {
-        if (item.poster) await warmUrl(item.poster, 'poster');
-        await warmUrl(entryVideoUrl(item.url), 'video');
-      } else {
-        await warmUrl(entryImageUrl(item.url), 'image');
-      }
-    }
-  })().finally(() => {
-    lookaheadWarming.delete(slug);
-  });
-
-  lookaheadWarming.set(slug, task);
-  return task;
 }
 
 export function shouldEagerBindCaseSlot(slot: number) {
