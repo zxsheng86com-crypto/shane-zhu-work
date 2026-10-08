@@ -1,13 +1,9 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-
-function isNarrowViewport() {
-  return typeof window !== 'undefined' && window.matchMedia('(max-width: 800px)').matches;
-}
+import { useEffect, useRef, useState } from 'react';
 
 function pickSrc(src: string, mobileSrc: string | undefined, allowMobile: boolean) {
-  if (allowMobile && mobileSrc && isNarrowViewport()) return mobileSrc;
+  if (allowMobile && mobileSrc && window.matchMedia('(max-width: 800px)').matches) return mobileSrc;
   return src;
 }
 
@@ -48,69 +44,62 @@ export function CaseStill({
 }) {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const allowMobile = Boolean(mobileSrc);
-  const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, allowMobile));
   const [ready, setReady] = useState(false);
-  const wantRef = useRef(activeSrc);
-  wantRef.current = activeSrc;
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 800px)');
-    const sync = () => setActiveSrc(pickSrc(src, mobileSrc, allowMobile));
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  }, [src, mobileSrc, allowMobile]);
-
-  // Hide before paint when the target file changes — prevents one-frame foreign flash.
-  useLayoutEffect(() => {
-    setReady(false);
-  }, [activeSrc]);
+  const wantRef = useRef(src);
 
   useEffect(() => {
     const node = imgRef.current;
     if (!node) return;
 
-    let cancelled = false;
-
+    const mq = window.matchMedia('(max-width: 800px)');
     const revealIfValid = () => {
-      if (cancelled) return;
       if (!matchesWant(node, wantRef.current)) return;
       if (!node.complete || node.naturalWidth < 2) return;
       setReady(true);
     };
 
-    // Cached decode can skip onLoad.
-    if (node.complete) revealIfValid();
-
+    const sync = (resetReady = false) => {
+      const nextSrc = pickSrc(src, mobileSrc, allowMobile);
+      const changed = nextSrc !== wantRef.current;
+      wantRef.current = nextSrc;
+      if (changed && resetReady) setReady(false);
+      revealIfValid();
+    };
     const onLoad = () => revealIfValid();
     const onError = () => {
       // Stay gray — never reveal a broken/foreign paint.
       setReady(false);
     };
+    const onMediaChange = () => sync(true);
 
     node.addEventListener('load', onLoad);
     node.addEventListener('error', onError);
+    mq.addEventListener('change', onMediaChange);
+    sync();
     return () => {
-      cancelled = true;
       node.removeEventListener('load', onLoad);
       node.removeEventListener('error', onError);
+      mq.removeEventListener('change', onMediaChange);
     };
-  }, [activeSrc]);
+  }, [src, mobileSrc, allowMobile]);
 
   return (
     <span className={`case-still${ready ? ' is-ready' : ''}${lqip ? ' has-lqip' : ''}`}>
       {lqip ? <span className="case-media-lqip" style={{ backgroundImage: `url(${lqip})` }} aria-hidden /> : null}
       {/* Native img — Next/Image cache can paint a foreign bitmap for one frame. */}
-      <img
-        ref={imgRef}
-        src={activeSrc}
-        alt=""
-        sizes={sizes}
-        loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
-        draggable={false}
-        data-pin-nopin="true"
-      />
+      <picture>
+        {allowMobile && mobileSrc ? <source media="(max-width: 800px)" srcSet={mobileSrc} /> : null}
+        <img
+          ref={imgRef}
+          src={src}
+          alt=""
+          sizes={sizes}
+          loading={priority ? 'eager' : 'lazy'}
+          decoding="async"
+          draggable={false}
+          data-pin-nopin="true"
+        />
+      </picture>
       <span className="case-video-mask" aria-hidden />
     </span>
   );

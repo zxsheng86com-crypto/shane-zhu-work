@@ -85,8 +85,8 @@ function mediaUrl(folder: string, slot: number, ext: 'webp' | 'mp4', version: st
   return `/media/${folder}/${pad2(slot)}.${ext}?v=${version}`;
 }
 
-function posterUrl(folder: string, slot: number) {
-  return `/media/${folder}/posters/${pad2(slot)}.jpg`;
+function posterUrl(folder: string, slot: number, version: string) {
+  return `/media/${folder}/posters/${pad2(slot)}.jpg?v=${version}`;
 }
 
 export type CaseMediaItem = {
@@ -98,18 +98,19 @@ export type CaseMediaItem = {
 
 function itemForSlot(catalog: CaseCatalog, slot: number): CaseMediaItem | null {
   if (slot < 1 || slot > catalog.maxSlot) return null;
+  const version = catalog.slug === 'dji-avinox' && slot === 8 ? '20261008-avinox-08' : catalog.version;
   if (catalog.videoSlots.has(slot)) {
     return {
       slot,
       kind: 'video',
-      url: mediaUrl(catalog.folder, slot, 'mp4', catalog.version),
-      poster: posterUrl(catalog.folder, slot),
+      url: mediaUrl(catalog.folder, slot, 'mp4', version),
+      poster: posterUrl(catalog.folder, slot, version),
     };
   }
   return {
     slot,
     kind: 'image',
-    url: mediaUrl(catalog.folder, slot, 'webp', catalog.version),
+    url: mediaUrl(catalog.folder, slot, 'webp', version),
   };
 }
 
@@ -157,6 +158,7 @@ export const openingPacks: Record<ProjectSlug, OpeningPack> = {
 };
 
 const warmed = new Set<string>();
+const warmingImages = new Map<string, Promise<void>>();
 const warming = new Map<string, Promise<void>>();
 const lookaheadWarming = new Map<string, Promise<void>>();
 let prefetchGate: Promise<void> = Promise.resolve();
@@ -181,13 +183,24 @@ export function nextProjectSlug(slug: string) {
 }
 
 function warmImage(url: string) {
-  return new Promise<void>((resolve) => {
+  const key = mediaKey(url);
+  if (warmed.has(key)) return Promise.resolve();
+  const existing = warmingImages.get(key);
+  if (existing) return existing;
+
+  const task = new Promise<void>((resolve) => {
     const image = new Image();
     image.decoding = 'async';
-    image.onload = () => resolve();
+    image.onload = () => {
+      warmed.add(key);
+      resolve();
+    };
     image.onerror = () => resolve();
     image.src = url;
   });
+  warmingImages.set(key, task);
+  void task.finally(() => warmingImages.delete(key));
+  return task;
 }
 
 async function warmVideo(url: string) {
@@ -241,7 +254,7 @@ export function warmOpeningPack(slug: string, prefetchRoute?: (href: string) => 
   const task = (async () => {
     prefetchRoute?.(pack.href);
     for (const poster of pack.posters) await warmUrl(poster, 'poster');
-    for (const image of pack.images) await warmUrl(image, 'image');
+    for (const image of pack.images) await warmUrl(entryImageUrl(image), 'image');
   })().finally(() => {
     warming.delete(slug);
   });
@@ -263,7 +276,7 @@ export async function warmOpeningChain(prefetchRoute?: (href: string) => void, f
 export function openingPackWarmed(slug: string) {
   if (!isProjectSlug(slug)) return false;
   const pack = openingPacks[slug];
-  const urls = [...pack.images, ...pack.posters];
+  const urls = [...pack.images.map(entryImageUrl), ...pack.posters];
   return urls.length > 0 && urls.every((url) => warmed.has(mediaKey(url)));
 }
 
@@ -287,18 +300,15 @@ function entryVideoUrl(desktopUrl: string) {
 
 function loadImageProgress(url: string, onShare: (ratio: number) => void) {
   return new Promise<void>((resolve) => {
-    const image = new Image();
-    image.decoding = 'async';
-    image.onload = () => {
-      onShare(1);
-      warmed.add(mediaKey(url));
-      resolve();
-    };
-    image.onerror = () => {
+    if (warmed.has(mediaKey(url))) {
       onShare(1);
       resolve();
-    };
-    image.src = url;
+      return;
+    }
+    void warmImage(url).then(() => {
+      onShare(1);
+      resolve();
+    });
   });
 }
 
