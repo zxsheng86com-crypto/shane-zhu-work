@@ -40,7 +40,7 @@ const catalogs: Record<ProjectSlug, CaseCatalog> = {
     href: '/work/common-ground',
     folder: 'dji-romo',
     videoSlots: new Set([2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 28, 31]),
-    version: '20260930-still2',
+    version: '20261008-media',
     maxSlot: 31,
   },
   'dji-avinox': {
@@ -48,7 +48,7 @@ const catalogs: Record<ProjectSlug, CaseCatalog> = {
     href: '/work/dji-avinox',
     folder: 'dji-avinox',
     videoSlots: new Set([2, 4, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 22, 23, 24, 25, 29, 31]),
-    version: '20260930-a02',
+    version: '20261008-media',
     maxSlot: 32,
   },
   'dji-power': {
@@ -56,7 +56,7 @@ const catalogs: Record<ProjectSlug, CaseCatalog> = {
     href: '/work/dji-power',
     folder: 'dji-power',
     videoSlots: new Set([3, 14, 16]),
-    version: '20260930-still2',
+    version: '20261008-media',
     maxSlot: 18,
   },
   'dji-fly': {
@@ -64,7 +64,7 @@ const catalogs: Record<ProjectSlug, CaseCatalog> = {
     href: '/work/dji-fly',
     folder: 'dji-fly',
     videoSlots: new Set([7, 8, 9, 10, 11, 12, 13, 14, 15, 19]),
-    version: '20260930-still2',
+    version: '20261008-media',
     maxSlot: 24,
   },
   'dji-aura-logo': {
@@ -72,7 +72,7 @@ const catalogs: Record<ProjectSlug, CaseCatalog> = {
     href: '/work/dji-aura-logo',
     folder: 'dji-aura',
     videoSlots: new Set([1, 4, 8]),
-    version: '20260930-still2',
+    version: '20261008-media',
     maxSlot: 12,
   },
 };
@@ -81,7 +81,7 @@ function pad2(slot: number) {
   return String(slot).padStart(2, '0');
 }
 
-function mediaUrl(folder: string, slot: number, ext: 'jpg' | 'mp4', version: string) {
+function mediaUrl(folder: string, slot: number, ext: 'webp' | 'mp4', version: string) {
   return `/media/${folder}/${pad2(slot)}.${ext}?v=${version}`;
 }
 
@@ -109,7 +109,7 @@ function itemForSlot(catalog: CaseCatalog, slot: number): CaseMediaItem | null {
   return {
     slot,
     kind: 'image',
-    url: mediaUrl(catalog.folder, slot, 'jpg', catalog.version),
+    url: mediaUrl(catalog.folder, slot, 'webp', catalog.version),
   };
 }
 
@@ -306,7 +306,7 @@ function entryImageUrl(desktopUrl: string) {
   if (typeof window === 'undefined') return desktopUrl;
   if (!window.matchMedia('(max-width: 800px)').matches) return desktopUrl;
   const path = stripQuery(desktopUrl);
-  if (!path.endsWith('.jpg')) return desktopUrl;
+  if (!path.endsWith('.webp')) return desktopUrl;
   const mobilePath = path.replace(/\/([^/]+)$/, '/mobile/$1');
   if (mobilePath === path) return desktopUrl;
   return desktopUrl.replace(path, mobilePath);
@@ -314,7 +314,7 @@ function entryImageUrl(desktopUrl: string) {
 
 /**
  * Entry gate loads stills + video posters for slots 01–06 only.
- * On phones, prefer /mobile/*.jpg so we do not pull multi‑MB desktop masters.
+ * On phones, prefer /mobile/*.webp so we do not pull multi‑MB desktop masters.
  */
 export async function loadCaseEntryPack(slug: string, onProgress?: (value: number) => void) {
   if (!isProjectSlug(slug)) {

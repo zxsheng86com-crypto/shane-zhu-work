@@ -17,7 +17,7 @@ import { CaseEntryGate } from './case-entry-gate';
 function mobileStillSrc(src: string) {
   const q = src.includes('?') ? src.slice(src.indexOf('?')) : '';
   const bare = src.split('?')[0];
-  if (!bare.endsWith('.jpg')) return undefined;
+  if (!bare.endsWith('.webp')) return undefined;
   return `${bare.replace(/\/([^/]+)$/, '/mobile/$1')}${q}`;
 }
 
@@ -50,14 +50,14 @@ function hasMobileVideo(folder: string, slot: number) {
 }
 
 function hasMobileStill(folder: string, slot: number) {
-  return existsSync(publicMedia(folder, 'mobile', `${pad2(slot)}.jpg`));
+  return existsSync(publicMedia(folder, 'mobile', `${pad2(slot)}.webp`));
 }
 
 function posterFor(folder: string, slot: number) {
   const jpg = publicMedia(folder, 'posters', `${pad2(slot)}.jpg`);
-  if (existsSync(jpg)) return `/media/${folder}/posters/${pad2(slot)}.jpg`;
+  if (existsSync(jpg)) return `/media/${folder}/posters/${pad2(slot)}.jpg?v=20261008-media`;
   const png = publicMedia(folder, 'posters', `${pad2(slot)}.png`);
-  if (existsSync(png)) return `/media/${folder}/posters/${pad2(slot)}.png`;
+  if (existsSync(png)) return `/media/${folder}/posters/${pad2(slot)}.png?v=20261008-media`;
   return undefined;
 }
 
@@ -80,18 +80,19 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
         : projectSlug === 'dji-aura-logo'
           ? { folder: 'dji-aura', slots: auraSlots, videos: auraVideos }
         : undefined;
-  const src = media?.slots.has(slot) ? `/media/${media.folder}/${pad2(slot)}.${media.videos.has(slot) ? 'mp4' : 'jpg'}` : undefined;
-  const size = src ? (mediaDimensions as Record<string, { width: number; height: number }>)[src] : undefined;
-  const mediaSrc = src === '/media/dji-aura/06.jpg'
-    ? `${src}?v=20260930-still2`
+  const src = media?.slots.has(slot) ? `/media/${media.folder}/${pad2(slot)}.${media.videos.has(slot) ? 'mp4' : 'webp'}` : undefined;
+  const dimensionMap = mediaDimensions as Record<string, { width: number; height: number }>;
+  const size = src ? dimensionMap[src] ?? dimensionMap[src.replace(/\.webp$/, '.jpg')] : undefined;
+  const mediaSrc = src === '/media/dji-aura/06.webp'
+    ? `${src}?v=20261008-media`
     : src && projectSlug === 'dji-power'
-    ? `${src}?v=20260930-still2`
+    ? `${src}?v=20261008-media`
     : src && projectSlug === 'dji-aura-logo'
-      ? `${src}?v=20260930-still2`
+      ? `${src}?v=20261008-media`
     : src && projectSlug === 'dji-fly'
-      ? `${src}?v=20260930-still2`
-    : src && projectSlug === 'common-ground' ? `${src}?v=20260930-still2`
-      : src && projectSlug === 'dji-avinox' ? `${src}?v=20260930-a02` : src;
+      ? `${src}?v=20261008-media`
+    : src && projectSlug === 'common-ground' ? `${src}?v=20261008-media`
+      : src && projectSlug === 'dji-avinox' ? `${src}?v=20261008-media` : src;
   const useMobile = Boolean(media && media.videos.has(slot) && hasMobileVideo(media.folder, slot));
   const poster = media && media.videos.has(slot) ? posterFor(media.folder, slot) : undefined;
   const lqip = media && !media.videos.has(slot) ? lqipFor(media.folder, slot) : undefined;
