@@ -98,7 +98,11 @@ export type CaseMediaItem = {
 
 function itemForSlot(catalog: CaseCatalog, slot: number): CaseMediaItem | null {
   if (slot < 1 || slot > catalog.maxSlot) return null;
-  const version = catalog.slug === 'dji-avinox' && slot === 8 ? '20261008-avinox-08' : catalog.version;
+  const version = catalog.slug === 'dji-avinox' && slot === 8
+    ? '20261008-avinox-08'
+    : catalog.slug === 'dji-fly' && [7, 8, 10].includes(slot)
+      ? `20261008-fly-${pad2(slot)}`
+      : catalog.version;
   if (catalog.videoSlots.has(slot)) {
     return {
       slot,
@@ -291,7 +295,7 @@ function stripQuery(url: string) {
 
 function entryVideoUrl(desktopUrl: string) {
   if (typeof window === 'undefined') return desktopUrl;
-  if (!window.matchMedia('(max-width: 800px)').matches) return desktopUrl;
+  if (!window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches) return desktopUrl;
   const path = stripQuery(desktopUrl);
   const mobilePath = path.replace(/\/([^/]+)$/, '/mobile/$1');
   if (mobilePath === path) return desktopUrl;
@@ -314,7 +318,7 @@ function loadImageProgress(url: string, onShare: (ratio: number) => void) {
 
 function entryImageUrl(desktopUrl: string) {
   if (typeof window === 'undefined') return desktopUrl;
-  if (!window.matchMedia('(max-width: 800px)').matches) return desktopUrl;
+  if (!window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches) return desktopUrl;
   const path = stripQuery(desktopUrl);
   if (!path.endsWith('.webp')) return desktopUrl;
   const mobilePath = path.replace(/\/([^/]+)$/, '/mobile/$1');
@@ -379,7 +383,7 @@ export function warmCaseLookahead(slug: string) {
         if (item.poster) await warmUrl(item.poster, 'poster');
         await warmUrl(entryVideoUrl(item.url), 'video');
       } else {
-        await warmUrl(item.url, 'image');
+        await warmUrl(entryImageUrl(item.url), 'image');
       }
     }
   })().finally(() => {

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 function pickSrc(src: string, mobileSrc: string | undefined, allowMobile: boolean) {
-  if (allowMobile && mobileSrc && window.matchMedia('(max-width: 800px)').matches) return mobileSrc;
+  if (allowMobile && mobileSrc && window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches) return mobileSrc;
   return src;
 }
 
@@ -45,13 +45,30 @@ export function CaseStill({
   const imgRef = useRef<HTMLImageElement | null>(null);
   const allowMobile = Boolean(mobileSrc);
   const [ready, setReady] = useState(false);
+  const [previewReady, setPreviewReady] = useState(false);
+  const [mobileFailed, setMobileFailed] = useState(false);
   const wantRef = useRef(src);
+
+  useEffect(() => {
+    if (!lqip) return;
+    let active = true;
+    const preview = new window.Image();
+    preview.onload = () => {
+      if (active) setPreviewReady(true);
+    };
+    preview.src = lqip;
+    if (preview.complete && preview.naturalWidth > 0) setPreviewReady(true);
+    return () => {
+      active = false;
+    };
+  }, [lqip]);
 
   useEffect(() => {
     const node = imgRef.current;
     if (!node) return;
 
-    const mq = window.matchMedia('(max-width: 800px)');
+    const activeMobileSrc = mobileFailed ? undefined : mobileSrc;
+    const mq = window.matchMedia('(max-width: 1024px), (pointer: coarse)');
     const revealIfValid = () => {
       if (!matchesWant(node, wantRef.current)) return;
       if (!node.complete || node.naturalWidth < 2) return;
@@ -59,7 +76,7 @@ export function CaseStill({
     };
 
     const sync = (resetReady = false) => {
-      const nextSrc = pickSrc(src, mobileSrc, allowMobile);
+      const nextSrc = pickSrc(src, activeMobileSrc, allowMobile);
       const changed = nextSrc !== wantRef.current;
       wantRef.current = nextSrc;
       if (changed && resetReady) setReady(false);
@@ -67,8 +84,8 @@ export function CaseStill({
     };
     const onLoad = () => revealIfValid();
     const onError = () => {
-      // Stay gray — never reveal a broken/foreign paint.
       setReady(false);
+      if (mobileSrc && pathOf(wantRef.current) === pathOf(mobileSrc)) setMobileFailed(true);
     };
     const onMediaChange = () => sync(true);
 
@@ -81,14 +98,14 @@ export function CaseStill({
       node.removeEventListener('error', onError);
       mq.removeEventListener('change', onMediaChange);
     };
-  }, [src, mobileSrc, allowMobile]);
+  }, [src, mobileSrc, allowMobile, mobileFailed]);
 
   return (
-    <span className={`case-still${ready ? ' is-ready' : ''}${lqip ? ' has-lqip' : ''}`}>
+    <span className={`case-still${ready ? ' is-ready' : ''}${previewReady ? ' is-preview-ready' : ''}${lqip ? ' has-lqip' : ''}`}>
       {lqip ? <span className="case-media-lqip" style={{ backgroundImage: `url(${lqip})` }} aria-hidden /> : null}
       {/* Native img — Next/Image cache can paint a foreign bitmap for one frame. */}
       <picture>
-        {allowMobile && mobileSrc ? <source media="(max-width: 800px)" srcSet={mobileSrc} /> : null}
+        {allowMobile && mobileSrc && !mobileFailed ? <source media="(max-width: 1024px), (pointer: coarse)" srcSet={mobileSrc} /> : null}
         <img
           ref={imgRef}
           src={src}

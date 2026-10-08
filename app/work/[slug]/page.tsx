@@ -53,11 +53,11 @@ function hasMobileStill(folder: string, slot: number) {
   return existsSync(publicMedia(folder, 'mobile', `${pad2(slot)}.webp`));
 }
 
-function posterFor(folder: string, slot: number) {
+function posterFor(folder: string, slot: number, version = '20261008-media') {
   const jpg = publicMedia(folder, 'posters', `${pad2(slot)}.jpg`);
-  if (existsSync(jpg)) return `/media/${folder}/posters/${pad2(slot)}.jpg?v=20261008-media`;
+  if (existsSync(jpg)) return `/media/${folder}/posters/${pad2(slot)}.jpg?v=${version}`;
   const png = publicMedia(folder, 'posters', `${pad2(slot)}.png`);
-  if (existsSync(png)) return `/media/${folder}/posters/${pad2(slot)}.png?v=20261008-media`;
+  if (existsSync(png)) return `/media/${folder}/posters/${pad2(slot)}.png?v=${version}`;
   return undefined;
 }
 
@@ -91,12 +91,16 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
     ? `${src}?v=20261008-media`
     : src && projectSlug === 'dji-aura-logo'
       ? `${src}?v=20261008-media`
-    : src && projectSlug === 'dji-fly'
-      ? `${src}?v=20261008-media`
+    : src && projectSlug === 'dji-fly' && [7, 8, 10].includes(slot)
+      ? `${src}?v=20261008-fly-${pad2(slot)}`
+      : src && projectSlug === 'dji-fly'
+        ? `${src}?v=20261008-media`
     : src && projectSlug === 'common-ground' ? `${src}?v=20261008-media`
       : src && projectSlug === 'dji-avinox' ? `${src}?v=20261008-media` : src;
   const useMobile = Boolean(media && media.videos.has(slot) && hasMobileVideo(media.folder, slot));
-  const poster = media && media.videos.has(slot) ? posterFor(media.folder, slot) : undefined;
+  const poster = media && media.videos.has(slot)
+    ? posterFor(media.folder, slot, projectSlug === 'dji-fly' && [7, 8, 10].includes(slot) ? `20261008-fly-${pad2(slot)}` : '20261008-media')
+    : undefined;
   const lqip = media && !media.videos.has(slot) ? lqipFor(media.folder, slot) : undefined;
   const stillMobile = media && !media.videos.has(slot) && hasMobileStill(media.folder, slot)
     ? mobileStillSrc(mediaSrc || '')

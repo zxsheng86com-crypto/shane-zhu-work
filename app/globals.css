@@ -71,13 +71,10 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .case-media-poster{opacity:1;transition:opacity .45s cubic-bezier(.4,0,.2,1)}
 /* Solid cover until THIS asset is verified — no translucent cross-fade of a foreign frame. */
 .case-video-mask{position:absolute;inset:0;z-index:2;background:#121212;opacity:1;pointer-events:none;transition:none}
-.case-still.is-ready .case-video-mask,.case-video.is-ready .case-video-mask{opacity:0}
+.case-still.is-ready .case-video-mask,.case-still.is-preview-ready .case-video-mask,.case-video.is-ready .case-video-mask,.case-video.is-poster-ready .case-video-mask{opacity:0}
 .case-still img,.case-video>video{position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:cover;opacity:0;visibility:hidden;transition:none}
 .case-still.is-ready img,.case-video.is-ready>video{opacity:1;visibility:visible}
 .case-still.is-ready .case-media-lqip,.case-video.is-ready .case-media-poster{opacity:0;transition:opacity .35s cubic-bezier(.4,0,.2,1)}
-@media(max-width:800px){
-  .case-media-lqip{display:none}
-}
 
 .home-hero,.page-intro,.service-hero{display:flex;flex-direction:column;justify-content:flex-end;min-height:556px;padding:80px 16px}
 .home-hero h1,.page-intro h1,.service-hero h1{max-width:793px;margin:0;font-family:inherit;font-size:40px;font-weight:400;line-height:1.2;letter-spacing:-.4px}

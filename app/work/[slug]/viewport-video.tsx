@@ -25,7 +25,7 @@ function isSafari() {
 }
 
 function isNarrowViewport() {
-  return typeof window !== 'undefined' && window.matchMedia('(max-width: 800px)').matches;
+  return typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches;
 }
 
 function stripQuery(path: string) {
@@ -114,18 +114,33 @@ export function ViewportVideo({
 
   const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, mobile));
   const [ready, setReady] = useState(false);
+  const [posterReady, setPosterReady] = useState(false);
   const wantRef = useRef(activeSrc);
   wantRef.current = activeSrc;
   const entryReadyRef = useRef(entryReady);
   entryReadyRef.current = entryReady;
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 800px)');
+    const mq = window.matchMedia('(max-width: 1024px), (pointer: coarse)');
     const sync = () => setActiveSrc(pickSrc(src, mobileSrc, mobile));
     sync();
     mq.addEventListener('change', sync);
     return () => mq.removeEventListener('change', sync);
   }, [src, mobile, mobileSrc]);
+
+  useEffect(() => {
+    if (!poster) return;
+    let active = true;
+    const preview = new window.Image();
+    preview.onload = () => {
+      if (active) setPosterReady(true);
+    };
+    preview.src = poster;
+    if (preview.complete && preview.naturalWidth > 0) setPosterReady(true);
+    return () => {
+      active = false;
+    };
+  }, [poster]);
 
   useLayoutEffect(() => {
     setReady(false);
@@ -415,7 +430,7 @@ export function ViewportVideo({
   }, [entryReady]);
 
   return (
-    <span className={`case-video${ready ? ' is-ready' : ''}${poster ? ' has-poster' : ''}`}>
+    <span className={`case-video${ready ? ' is-ready' : ''}${posterReady ? ' is-poster-ready' : ''}${poster ? ' has-poster' : ''}`}>
       {poster ? (
         <span
           className="case-media-poster"
