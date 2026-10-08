@@ -9,18 +9,11 @@ export const videoLoopDelays: Record<string, number> = {
 /**
  * Case video — one slot, one file.
  *
- * Scramble (slot A painting slot B frames) is Safari/Chrome decoder bleed when
- * too many <video src> stay attached. Rules:
+ * Rules:
  * - Exact pathname match only (no endsWith)
- * - Cap concurrent attached sources site-wide
- * - Detach when leaving view (gray until rebound)
+ * - Bind only near the viewport
+ * - Pause offscreen, retaining the loaded frame for an immediate return
  */
-
-function isSafari() {
-  if (typeof navigator === 'undefined') return false;
-  const ua = navigator.userAgent;
-  return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|Firefox|Android/i.test(ua);
-}
 
 function isNarrowViewport() {
   return typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches;
@@ -58,36 +51,6 @@ function isBoundTo(video: HTMLVideoElement, wantUrl: string) {
   return pathOf(current) === wantPath;
 }
 
-/** Max simultaneous attached MP4 sources. Count-based — no stale element Set. */
-function maxAttached() {
-  if (isNarrowViewport()) return 4;
-  if (isSafari()) return 2;
-  return 2;
-}
-
-let attachedCount = 0;
-const attachWaiters: Array<() => void> = [];
-
-function acquireAttach(): Promise<() => void> {
-  return new Promise((resolve) => {
-    const tryAcquire = () => {
-      if (attachedCount >= maxAttached()) {
-        attachWaiters.push(tryAcquire);
-        return;
-      }
-      attachedCount += 1;
-      let released = false;
-      resolve(() => {
-        if (released) return;
-        released = true;
-        attachedCount = Math.max(0, attachedCount - 1);
-        const next = attachWaiters.shift();
-        if (next) next();
-      });
-    };
-    tryAcquire();
-  });
-}
 
 export function ViewportVideo({
   src,
@@ -150,11 +113,8 @@ export function ViewportVideo({
     let cancelled = false;
     let bound = false;
     let bindGen = 0;
-    let releaseAttach: (() => void) | null = null;
-    let acquireToken = 0;
     let frameCallbackId: number | undefined;
     let replayTimer: ReturnType<typeof setTimeout> | undefined;
-    let detachTimer: ReturnType<typeof setTimeout> | undefined;
 
     const hide = () => setReady(false);
 
@@ -175,15 +135,7 @@ export function ViewportVideo({
     };
 
     const detach = () => {
-      if (detachTimer) {
-        clearTimeout(detachTimer);
-        detachTimer = undefined;
-      }
       clearPipeline();
-      if (releaseAttach) {
-        releaseAttach();
-        releaseAttach = null;
-      }
     };
 
     const revealIfValid = () => {
@@ -238,30 +190,15 @@ export function ViewportVideo({
       }
     };
 
-    const bindToWant = async () => {
+    const bindToWant = () => {
       const want = wantRef.current;
       if (cancelled) return;
-      if (bound && isBoundTo(video, want) && releaseAttach) {
+      if (bound && isBoundTo(video, want)) {
         playIfAllowed();
         return;
       }
 
       hide();
-      const token = ++acquireToken;
-      if (!releaseAttach) {
-        releaseAttach = await acquireAttach();
-        if (cancelled || token !== acquireToken) {
-          releaseAttach();
-          releaseAttach = null;
-          return;
-        }
-      }
-
-      if (detachTimer) {
-        clearTimeout(detachTimer);
-        detachTimer = undefined;
-      }
-
       bound = true;
       bindGen += 1;
       video.dataset.bindGen = String(bindGen);
@@ -274,22 +211,12 @@ export function ViewportVideo({
       playIfAllowed();
     };
 
-    const scheduleDetach = () => {
-      if (detachTimer) clearTimeout(detachTimer);
-      // Short grace so tiny scroll jank doesn't churn; then free the decoder slot.
-      detachTimer = setTimeout(() => {
-        detachTimer = undefined;
-        if (!near && !inView) detach();
-      }, 220);
-    };
-
     const nearIo = new IntersectionObserver(([entry]) => {
       near = entry.isIntersecting;
       if (near) {
-        void bindToWant();
+        bindToWant();
       } else if (!inView) {
         freeze();
-        scheduleDetach();
       }
     }, {
       rootMargin: isNarrowViewport() ? '60px 0px' : '120px 0px',
@@ -300,10 +227,9 @@ export function ViewportVideo({
       inView = entry.isIntersecting;
       if (inView) {
         near = true;
-        void bindToWant().then(() => playIfAllowed());
+        bindToWant();
       } else {
         freeze();
-        if (!near) scheduleDetach();
       }
     }, {
       rootMargin: '0px',
@@ -360,13 +286,11 @@ export function ViewportVideo({
     document.addEventListener('visibilitychange', onVisibility);
     reducedMotion.addEventListener('change', onVisibility);
 
-    if (eager) void bindToWant();
+    if (eager) bindToWant();
 
     return () => {
       cancelled = true;
-      acquireToken += 1;
       if (replayTimer) clearTimeout(replayTimer);
-      if (detachTimer) clearTimeout(detachTimer);
       const rvfc = video as HTMLVideoElement & { cancelVideoFrameCallback?: (id: number) => void };
       if (frameCallbackId !== undefined && typeof rvfc.cancelVideoFrameCallback === 'function') {
         rvfc.cancelVideoFrameCallback(frameCallbackId);
