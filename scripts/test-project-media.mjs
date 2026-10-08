@@ -4,9 +4,10 @@ const { chromium, webkit } = imported.default ?? imported;
 const browser = await (process.argv.includes('--webkit') ? webkit.launch() : chromium.launch({ channel: 'chrome', headless: true }));
 try {
   const projects = [
-    ['common-ground', 29],
+    ['common-ground', 31],
     ['dji-avinox', 32],
     ['dji-power', 18],
+    ['dji-fly', 24],
     ['dji-aura-logo', 12],
   ];
   const mobile = !process.argv.includes('--desktop');
@@ -25,7 +26,12 @@ try {
     const media = figure.locator('img,video');
     const state = await media.evaluate(async e => {
       if (e.tagName === 'IMG') {
-        await e.decode();
+        await new Promise((resolve, reject) => {
+          const timer = setInterval(() => {
+            if (e.naturalWidth > 0 && e.parentElement.parentElement.classList.contains('is-ready')) { clearInterval(timer); resolve(); }
+          }, 100);
+          setTimeout(() => { clearInterval(timer); reject(new Error(`Image timed out: ${e.getAttribute('src')}`)); }, 15000);
+        });
         return { src: e.currentSrc, width: e.naturalWidth, height: e.naturalHeight };
       }
       await new Promise((resolve, reject) => {
@@ -58,6 +64,18 @@ try {
       assert(delay >= 900, `AURA replayed too early: ${delay}ms`);
       console.log(`PASS AURA 04: replay delay ${Math.round(delay)}ms`);
     }
+  }
+  const unclearStills = await page.locator('.case-still').evaluateAll(es => es.filter(e => !e.classList.contains('is-ready') || e.querySelector('img').naturalWidth < 2).length);
+  assert.equal(unclearStills, 0, `${slug}: a loaded still reverted to placeholder`);
+  const videos = page.locator('.case-video video');
+  for (let index = 0; index < await videos.count(); index++) {
+    const video = videos.nth(index);
+    await video.evaluate(e => e.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(350);
+    const before = await video.evaluate(e => e.currentTime);
+    await page.waitForTimeout(250);
+    const returned = await video.evaluate(e => ({ paused: e.paused, time: e.currentTime, ready: e.parentElement.classList.contains('is-ready') }));
+    assert(returned.ready && !returned.paused && returned.time !== before, `${slug}: video ${index} did not resume clearly on return`);
   }
   assert.deepEqual(failures, []);
   console.log(`PASS ${slug}: all ${count} assets, mobile source selection, no failed media responses`);

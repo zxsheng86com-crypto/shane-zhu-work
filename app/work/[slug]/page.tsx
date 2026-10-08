@@ -52,20 +52,6 @@ function hasMobileStill(folder: string, slot: number) {
   return existsSync(publicMedia(folder, 'mobile', `${pad2(slot)}.webp`));
 }
 
-function posterFor(folder: string, slot: number, version = '20261008-media') {
-  const jpg = publicMedia(folder, 'posters', `${pad2(slot)}.jpg`);
-  if (existsSync(jpg)) return `/media/${folder}/posters/${pad2(slot)}.jpg?v=${version}`;
-  const png = publicMedia(folder, 'posters', `${pad2(slot)}.png`);
-  if (existsSync(png)) return `/media/${folder}/posters/${pad2(slot)}.png?v=${version}`;
-  return undefined;
-}
-
-function lqipFor(folder: string, slot: number) {
-  const jpg = publicMedia(folder, 'lqip', `${pad2(slot)}.jpg`);
-  if (existsSync(jpg)) return `/media/${folder}/lqip/${pad2(slot)}.jpg`;
-  return undefined;
-}
-
 function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true }: { number: number; projectSlug: string; tone?: string; showSlotNumber?: boolean }) {
   const slot = number;
   const media = projectSlug === 'common-ground'
@@ -97,10 +83,6 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
     : src && projectSlug === 'common-ground' ? `${src}?v=20261008-media`
       : src && projectSlug === 'dji-avinox' ? `${src}?v=20261008-media` : src;
   const useMobile = Boolean(media && media.videos.has(slot) && hasMobileVideo(media.folder, slot));
-  const poster = media && media.videos.has(slot)
-    ? posterFor(media.folder, slot, projectSlug === 'dji-fly' && [7, 8, 10].includes(slot) ? `20261008-fly-${pad2(slot)}` : '20261008-media')
-    : undefined;
-  const lqip = media && !media.videos.has(slot) ? lqipFor(media.folder, slot) : undefined;
   const stillMobile = media && !media.videos.has(slot) && hasMobileStill(media.folder, slot)
     ? mobileStillSrc(mediaSrc || '')
     : undefined;
@@ -112,10 +94,9 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
           width={size?.width}
           height={size?.height}
           mobile={useMobile}
-          poster={poster}
           slot={slot}
         />
-      : <CaseStill key={`${projectSlug}-${pad2(slot)}-still`} src={mediaSrc} mobileSrc={stillMobile} lqip={lqip} priority={shouldPriorityCaseSlot(slot)} />)}
+      : <CaseStill key={`${projectSlug}-${pad2(slot)}-still`} src={mediaSrc} mobileSrc={stillMobile} priority={shouldPriorityCaseSlot(slot)} />)}
     {showSlotNumber && <strong className="slot-number">{String(number).padStart(2, '0')}</strong>}
   </figure>;
 }

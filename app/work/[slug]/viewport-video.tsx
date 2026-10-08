@@ -57,14 +57,12 @@ export function ViewportVideo({
   width,
   height,
   mobile = false,
-  poster,
   slot,
 }: {
   src: string;
   width?: number;
   height?: number;
   mobile?: boolean;
-  poster?: string;
   slot?: number;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
@@ -75,7 +73,6 @@ export function ViewportVideo({
 
   const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, mobile));
   const [ready, setReady] = useState(false);
-  const [posterReady, setPosterReady] = useState(false);
   const wantRef = useRef(activeSrc);
   wantRef.current = activeSrc;
 
@@ -91,7 +88,7 @@ export function ViewportVideo({
     setReady(false);
   }, [activeSrc]);
 
-  // Bind near the viewport and detach when it leaves.
+  // Bind before entering view; cancel only unfinished offscreen requests.
   useEffect(() => {
     const video = ref.current;
     if (!video || typeof IntersectionObserver === 'undefined') return;
@@ -217,9 +214,10 @@ export function ViewportVideo({
         bindToWant();
       } else if (!inView) {
         freeze();
+        if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) clearPipeline();
       }
     }, {
-      rootMargin: isNarrowViewport() ? '60px 0px' : '120px 0px',
+      rootMargin: isNarrowViewport() ? '320px 0px' : '700px 0px',
       threshold: 0,
     });
 
@@ -230,6 +228,7 @@ export function ViewportVideo({
         bindToWant();
       } else {
         freeze();
+        if (!near && video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) clearPipeline();
       }
     }, {
       rootMargin: '0px',
@@ -309,17 +308,7 @@ export function ViewportVideo({
   }, [activeSrc, src, mobile, mobileSrc, loopDelayMs, eager]);
 
   return (
-    <span className={`case-video${ready ? ' is-ready' : ''}${posterReady ? ' is-poster-ready' : ''}${poster ? ' has-poster' : ''}`}>
-      {poster ? (
-        <img
-          className="case-media-poster"
-          src={poster}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          onLoad={() => setPosterReady(true)}
-        />
-      ) : null}
+    <span className={`case-video${ready ? ' is-ready' : ''}`}>
       <video
         ref={ref}
         width={width}

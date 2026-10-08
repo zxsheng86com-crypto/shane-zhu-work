@@ -32,20 +32,18 @@ function matchesWant(img: HTMLImageElement, wantUrl: string) {
 export function CaseStill({
   src,
   mobileSrc,
-  lqip,
   sizes = '(max-width: 1024px) 100vw, 81vw',
   priority = false,
 }: {
   src: string;
   mobileSrc?: string;
-  lqip?: string;
   sizes?: string;
   priority?: boolean;
 }) {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const allowMobile = Boolean(mobileSrc);
+  const [active, setActive] = useState(priority);
   const [ready, setReady] = useState(false);
-  const [previewReady, setPreviewReady] = useState(false);
   const [mobileFailed, setMobileFailed] = useState(false);
   const wantRef = useRef(src);
 
@@ -70,6 +68,7 @@ export function CaseStill({
     };
     const onLoad = () => revealIfValid();
     const onError = () => {
+      if (!node.getAttribute('src')) return;
       setReady(false);
       if (mobileSrc && pathOf(wantRef.current) === pathOf(mobileSrc)) setMobileFailed(true);
     };
@@ -86,15 +85,25 @@ export function CaseStill({
     };
   }, [src, mobileSrc, allowMobile, mobileFailed]);
 
+  useEffect(() => {
+    const node = imgRef.current;
+    if (priority || !node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setActive(true);
+      else if (node.naturalWidth < 2) setActive(false);
+    }, { rootMargin: window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches ? '320px 0px' : '700px 0px', threshold: 0 });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [priority]);
+
   return (
-    <span className={`case-still${ready ? ' is-ready' : ''}${previewReady ? ' is-preview-ready' : ''}${lqip ? ' has-lqip' : ''}`}>
-      {lqip ? <img className="case-media-lqip" src={lqip} alt="" loading={priority ? 'eager' : 'lazy'} decoding="async" onLoad={() => setPreviewReady(true)} /> : null}
+    <span className={`case-still${ready ? ' is-ready' : ''}`}>
       {/* Native img — Next/Image cache can paint a foreign bitmap for one frame. */}
       <picture>
-        {allowMobile && mobileSrc && !mobileFailed ? <source media="(max-width: 1024px), (pointer: coarse)" srcSet={mobileSrc} /> : null}
+        {allowMobile && mobileSrc && !mobileFailed ? <source media="(max-width: 1024px), (pointer: coarse)" srcSet={active ? mobileSrc : undefined} /> : null}
         <img
           ref={imgRef}
-          src={src}
+          src={active ? src : undefined}
           alt=""
           sizes={sizes}
           loading={priority ? 'eager' : 'lazy'}
