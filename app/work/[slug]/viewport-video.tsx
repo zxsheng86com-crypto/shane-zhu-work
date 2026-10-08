@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useCaseEntryReady } from './case-entry-gate';
 
 export const videoLoopDelays: Record<string, number> = {
   '/media/dji-aura/04.mp4': 1000,
@@ -15,7 +14,6 @@ export const videoLoopDelays: Record<string, number> = {
  * - Exact pathname match only (no endsWith)
  * - Cap concurrent attached sources site-wide
  * - Detach when leaving view (gray until rebound)
- * - Never tear down bind when the entry gate opens — only gate play()
  */
 
 function isSafari() {
@@ -62,7 +60,8 @@ function isBoundTo(video: HTMLVideoElement, wantUrl: string) {
 
 /** Max simultaneous attached MP4 sources. Count-based — no stale element Set. */
 function maxAttached() {
-  if (isSafari() || isNarrowViewport()) return 1;
+  if (isNarrowViewport()) return 4;
+  if (isSafari()) return 2;
   return 2;
 }
 
@@ -107,7 +106,6 @@ export function ViewportVideo({
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const loopDelayMs = Math.max(0, videoLoopDelays[stripQuery(src)] ?? 0);
-  const entryReady = useCaseEntryReady();
   const mobileSrc = withQuery(src.replace(/\/([^/?]+)(\?.*)?$/, '/mobile/$1'), src);
   // Pre-warm only the first one–two slots; everything else binds on approach.
   const eager = typeof slot === 'number' && slot >= 1 && slot <= (isNarrowViewport() ? 1 : 2);
@@ -117,8 +115,6 @@ export function ViewportVideo({
   const [posterReady, setPosterReady] = useState(false);
   const wantRef = useRef(activeSrc);
   wantRef.current = activeSrc;
-  const entryReadyRef = useRef(entryReady);
-  entryReadyRef.current = entryReady;
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1024px), (pointer: coarse)');
@@ -128,25 +124,11 @@ export function ViewportVideo({
     return () => mq.removeEventListener('change', sync);
   }, [src, mobile, mobileSrc]);
 
-  useEffect(() => {
-    if (!poster) return;
-    let active = true;
-    const preview = new window.Image();
-    preview.onload = () => {
-      if (active) setPosterReady(true);
-    };
-    preview.src = poster;
-    if (preview.complete && preview.naturalWidth > 0) setPosterReady(true);
-    return () => {
-      active = false;
-    };
-  }, [poster]);
-
   useLayoutEffect(() => {
     setReady(false);
   }, [activeSrc]);
 
-  // Bind / detach — does NOT depend on entryReady (avoids full rebind on gate open).
+  // Bind near the viewport and detach when it leaves.
   useEffect(() => {
     const video = ref.current;
     if (!video || typeof IntersectionObserver === 'undefined') return;
@@ -243,7 +225,7 @@ export function ViewportVideo({
     };
 
     const playIfAllowed = () => {
-      if (!entryReadyRef.current || !inView || waitingLoop || reducedMotion.matches || document.hidden) {
+      if (!inView || waitingLoop || reducedMotion.matches || document.hidden) {
         freeze();
         return;
       }
@@ -304,11 +286,6 @@ export function ViewportVideo({
     const nearIo = new IntersectionObserver(([entry]) => {
       near = entry.isIntersecting;
       if (near) {
-        if (poster) {
-          const img = new window.Image();
-          img.decoding = 'async';
-          img.src = poster;
-        }
         void bindToWant();
       } else if (!inView) {
         freeze();
@@ -405,37 +382,18 @@ export function ViewportVideo({
       reducedMotion.removeEventListener('change', onVisibility);
       detach();
     };
-  }, [activeSrc, src, mobile, mobileSrc, loopDelayMs, poster, eager]);
-
-  // Play gate only — must not rebind / clear src when the entry loader finishes.
-  useEffect(() => {
-    entryReadyRef.current = entryReady;
-    const video = ref.current;
-    if (!video) return;
-    if (!entryReady) {
-      video.autoplay = false;
-      if (!video.paused) video.pause();
-      return;
-    }
-    const rect = video.getBoundingClientRect();
-    const visible = rect.bottom > 40 && rect.top < window.innerHeight - 40;
-    if (
-      visible
-      && isBoundTo(video, wantRef.current)
-      && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
-    ) {
-      video.autoplay = true;
-      void video.play().catch(() => { /* ignore */ });
-    }
-  }, [entryReady]);
+  }, [activeSrc, src, mobile, mobileSrc, loopDelayMs, eager]);
 
   return (
     <span className={`case-video${ready ? ' is-ready' : ''}${posterReady ? ' is-poster-ready' : ''}${poster ? ' has-poster' : ''}`}>
       {poster ? (
-        <span
+        <img
           className="case-media-poster"
-          style={{ backgroundImage: `url(${poster})` }}
-          aria-hidden
+          src={poster}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setPosterReady(true)}
         />
       ) : null}
       <video

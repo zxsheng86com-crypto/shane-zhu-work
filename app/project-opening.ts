@@ -116,18 +116,6 @@ function itemForSlot(catalog: CaseCatalog, slot: number): CaseMediaItem | null {
   };
 }
 
-/** Ordered media items for a slot range (inclusive). */
-export function caseMediaRange(slug: string, fromSlot: number, toSlot: number): CaseMediaItem[] {
-  if (!isProjectSlug(slug)) return [];
-  const catalog = catalogs[slug];
-  const items: CaseMediaItem[] = [];
-  for (let slot = fromSlot; slot <= toSlot; slot += 1) {
-    const item = itemForSlot(catalog, slot);
-    if (item) items.push(item);
-  }
-  return items;
-}
-
 function packFromCatalog(catalog: CaseCatalog): OpeningPack {
   const images: string[] = [];
   const videos: string[] = [];
@@ -280,20 +268,6 @@ function stripQuery(url: string) {
   return url.split('?')[0];
 }
 
-function loadImageProgress(url: string, onShare: (ratio: number) => void) {
-  return new Promise<void>((resolve) => {
-    if (warmed.has(mediaKey(url))) {
-      onShare(1);
-      resolve();
-      return;
-    }
-    void warmImage(url).then(() => {
-      onShare(1);
-      resolve();
-    });
-  });
-}
-
 function entryImageUrl(desktopUrl: string) {
   if (typeof window === 'undefined') return desktopUrl;
   if (!window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches) return desktopUrl;
@@ -302,46 +276,6 @@ function entryImageUrl(desktopUrl: string) {
   const mobilePath = path.replace(/\/([^/]+)$/, '/mobile/$1');
   if (mobilePath === path) return desktopUrl;
   return desktopUrl.replace(path, mobilePath);
-}
-
-/**
- * Entry gate loads only the opening still or video poster.
- * On phones, prefer /mobile/*.webp so we do not pull multi‑MB desktop masters.
- */
-export async function loadCaseEntryPack(slug: string, onProgress?: (value: number) => void) {
-  if (!isProjectSlug(slug)) {
-    onProgress?.(100);
-    return;
-  }
-
-  const items = caseMediaRange(slug, 1, CASE_ENTRY_SLOTS);
-  const urls: string[] = [];
-  for (const item of items) {
-    if (item.kind === 'video') {
-      if (item.poster) urls.push(item.poster);
-    } else {
-      urls.push(entryImageUrl(item.url));
-    }
-  }
-
-  if (!urls.length) {
-    onProgress?.(100);
-    return;
-  }
-
-  const shares = new Array(urls.length).fill(0);
-  const report = () => {
-    const sum = shares.reduce((a, b) => a + b, 0);
-    onProgress?.(Math.max(0, Math.min(99, Math.round((sum / urls.length) * 100))));
-  };
-
-  for (let index = 0; index < urls.length; index += 1) {
-    await loadImageProgress(urls[index], (ratio) => {
-      shares[index] = ratio;
-      report();
-    });
-  }
-  onProgress?.(100);
 }
 
 export function shouldEagerBindCaseSlot(slot: number) {

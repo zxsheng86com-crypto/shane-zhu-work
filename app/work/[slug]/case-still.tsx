@@ -50,20 +50,6 @@ export function CaseStill({
   const wantRef = useRef(src);
 
   useEffect(() => {
-    if (!lqip) return;
-    let active = true;
-    const preview = new window.Image();
-    preview.onload = () => {
-      if (active) setPreviewReady(true);
-    };
-    preview.src = lqip;
-    if (preview.complete && preview.naturalWidth > 0) setPreviewReady(true);
-    return () => {
-      active = false;
-    };
-  }, [lqip]);
-
-  useEffect(() => {
     const node = imgRef.current;
     if (!node) return;
 
@@ -102,7 +88,7 @@ export function CaseStill({
 
   return (
     <span className={`case-still${ready ? ' is-ready' : ''}${previewReady ? ' is-preview-ready' : ''}${lqip ? ' has-lqip' : ''}`}>
-      {lqip ? <span className="case-media-lqip" style={{ backgroundImage: `url(${lqip})` }} aria-hidden /> : null}
+      {lqip ? <img className="case-media-lqip" src={lqip} alt="" loading={priority ? 'eager' : 'lazy'} decoding="async" onLoad={() => setPreviewReady(true)} /> : null}
       {/* Native img — Next/Image cache can paint a foreign bitmap for one frame. */}
       <picture>
         {allowMobile && mobileSrc && !mobileFailed ? <source media="(max-width: 1024px), (pointer: coarse)" srcSet={mobileSrc} /> : null}
