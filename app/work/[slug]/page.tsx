@@ -70,6 +70,8 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
   const size = src ? dimensionMap[src] ?? dimensionMap[src.replace(/\.webp$/, '.jpg')] : undefined;
   const mediaSrc = src === '/media/dji-aura/06.webp'
     ? `${src}?v=20261008-media`
+    : src === '/media/dji-avinox/02.mp4'
+    ? `${src}?v=20261008-faststart`
     : src === '/media/dji-avinox/08.webp'
     ? `${src}?v=20261008-avinox-08`
     : src && projectSlug === 'dji-power'

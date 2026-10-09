@@ -170,6 +170,7 @@ export function ViewportVideo({
 
     const freeze = () => {
       video.autoplay = false;
+      video.preload = 'metadata';
       if (!video.paused) video.pause();
     };
 
@@ -180,6 +181,7 @@ export function ViewportVideo({
       }
       if (!bound || !isBoundTo(video, wantRef.current)) return;
       video.autoplay = true;
+      video.preload = 'auto';
       if (video.paused) {
         void video.play().catch((error: DOMException) => {
           if (error.name !== 'AbortError') video.controls = true;
@@ -200,7 +202,7 @@ export function ViewportVideo({
       bindGen += 1;
       video.dataset.bindGen = String(bindGen);
       video.dataset.want = want;
-      video.preload = 'auto';
+      video.preload = 'metadata';
       video.src = want;
       try {
         video.load();
