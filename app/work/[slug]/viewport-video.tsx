@@ -54,12 +54,16 @@ function isBoundTo(video: HTMLVideoElement, wantUrl: string) {
 
 export function ViewportVideo({
   src,
+  poster,
+  mobilePoster,
   width,
   height,
   mobile = false,
   eager = false,
 }: {
   src: string;
+  poster?: string;
+  mobilePoster?: string;
   width?: number;
   height?: number;
   mobile?: boolean;
@@ -71,6 +75,7 @@ export function ViewportVideo({
 
   const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, mobile));
   const [ready, setReady] = useState(false);
+  const [hasPoster, setHasPoster] = useState(Boolean(eager && poster));
   const wantRef = useRef(activeSrc);
   wantRef.current = activeSrc;
 
@@ -99,8 +104,14 @@ export function ViewportVideo({
     video.setAttribute('playsinline', '');
     video.setAttribute('webkit-playsinline', '');
     video.controls = reducedMotion.matches;
-    video.preload = 'none';
-    video.removeAttribute('poster');
+    video.preload = eager ? 'metadata' : 'none';
+
+    const applyPoster = () => {
+      const selectedPoster = mobile && isNarrowViewport() ? mobilePoster || poster : poster;
+      if (!selectedPoster) return;
+      video.poster = selectedPoster;
+      setHasPoster(true);
+    };
 
     let inView = false;
     let near = false;
@@ -119,6 +130,7 @@ export function ViewportVideo({
       video.dataset.want = '';
       video.dataset.bindGen = '';
       video.autoplay = false;
+      video.preload = 'none';
       try {
         video.pause();
       } catch { /* ignore */ }
@@ -126,7 +138,6 @@ export function ViewportVideo({
         video.removeAttribute('src');
         video.load();
       } catch { /* ignore */ }
-      video.preload = 'none';
     };
 
     const detach = () => {
@@ -201,10 +212,18 @@ export function ViewportVideo({
       video.dataset.bindGen = String(bindGen);
       video.dataset.want = want;
       video.preload = near ? 'auto' : 'metadata';
-      video.src = want;
-      try {
-        video.load();
-      } catch { /* ignore */ }
+      applyPoster();
+      const selected = video.currentSrc || video.getAttribute('src') || '';
+      if (pathOf(selected) !== pathOf(want) || video.hasAttribute('src')) {
+        video.src = want;
+        try {
+          video.load();
+        } catch { /* ignore */ }
+      } else if (video.networkState !== HTMLMediaElement.NETWORK_LOADING) {
+        try {
+          video.load();
+        } catch { /* ignore */ }
+      }
       playIfAllowed();
     };
 
@@ -308,10 +327,10 @@ export function ViewportVideo({
       reducedMotion.removeEventListener('change', onVisibility);
       detach();
     };
-  }, [activeSrc, src, mobile, mobileSrc, loopDelayMs, eager]);
+  }, [activeSrc, src, mobile, mobileSrc, mobilePoster, poster, loopDelayMs, eager]);
 
   return (
-    <span className={`case-video${ready ? ' is-ready' : ''}`}>
+    <span className={`case-video${ready ? ' is-ready' : ''}${hasPoster ? ' has-poster' : ''}`}>
       <video
         ref={ref}
         width={width}
@@ -319,11 +338,15 @@ export function ViewportVideo({
         muted
         loop={!loopDelayMs}
         playsInline
-        preload="none"
+        preload={eager ? 'metadata' : 'none'}
+        poster={eager ? poster : undefined}
         draggable={false}
         controlsList="nodownload nofullscreen"
         disablePictureInPicture
-      />
+      >
+        {mobile && mobileSrc !== src ? <source src={mobileSrc} media="(max-width: 1024px), (pointer: coarse)" type="video/mp4" /> : null}
+        <source src={src} type="video/mp4" />
+      </video>
       <span className="case-video-mask" aria-hidden />
     </span>
   );

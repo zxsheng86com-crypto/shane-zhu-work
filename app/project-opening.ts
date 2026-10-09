@@ -20,8 +20,8 @@ export const projectChain = [
 
 export type ProjectSlug = (typeof projectChain)[number];
 
-/** How many media slots the entry progress gate must finish (stills + posters). */
-export const CASE_ENTRY_SLOTS = 1;
+/** Warm the first two media slots before entering a project. */
+export const CASE_ENTRY_SLOTS = 2;
 
 type CaseCatalog = {
   slug: ProjectSlug;
@@ -242,8 +242,9 @@ export function warmOpeningPack(slug: string, prefetchRoute?: (href: string) => 
   const pack = openingPacks[slug];
   const task = (async () => {
     prefetchRoute?.(pack.href);
-    for (const poster of pack.posters) await warmUrl(poster, 'poster');
-    for (const image of pack.images) await warmUrl(entryImageUrl(image), 'image');
+    for (const image of pack.images) await warmUrl(entryMediaUrl(image), 'image');
+    for (const poster of pack.posters) await warmUrl(entryMediaUrl(poster), 'poster');
+    for (const video of pack.videos) await warmUrl(entryMediaUrl(video), 'video');
   })().finally(() => {
     warming.delete(slug);
   });
@@ -255,7 +256,7 @@ export function warmOpeningPack(slug: string, prefetchRoute?: (href: string) => 
 export function openingPackWarmed(slug: string) {
   if (!isProjectSlug(slug)) return false;
   const pack = openingPacks[slug];
-  const urls = [...pack.images.map(entryImageUrl), ...pack.posters];
+  const urls = [...pack.images, ...pack.posters, ...pack.videos].map(entryMediaUrl);
   return urls.length > 0 && urls.every((url) => warmed.has(mediaKey(url)));
 }
 
@@ -268,12 +269,14 @@ function stripQuery(url: string) {
   return url.split('?')[0];
 }
 
-function entryImageUrl(desktopUrl: string) {
+function entryMediaUrl(desktopUrl: string) {
   if (typeof window === 'undefined') return desktopUrl;
   if (!window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches) return desktopUrl;
   const path = stripQuery(desktopUrl);
-  if (!path.endsWith('.webp')) return desktopUrl;
-  const mobilePath = path.replace(/\/([^/]+)$/, '/mobile/$1');
+  if (!path.endsWith('.webp') && !path.endsWith('.mp4') && !path.includes('/posters/')) return desktopUrl;
+  const mobilePath = path.includes('/posters/')
+    ? path.replace('/posters/', '/mobile/posters/')
+    : path.replace(/\/([^/]+)$/, '/mobile/$1');
   if (mobilePath === path) return desktopUrl;
   return desktopUrl.replace(path, mobilePath);
 }

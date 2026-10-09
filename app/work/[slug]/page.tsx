@@ -89,11 +89,20 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
   const stillMobile = media && !media.videos.has(slot) && hasMobileStill(media.folder, slot)
     ? mobileStillSrc(mediaSrc || '')
     : undefined;
+  const mediaQuery = mediaSrc?.includes('?') ? mediaSrc.slice(mediaSrc.indexOf('?')) : '';
+  const videoPoster = media?.videos.has(slot)
+    ? `/media/${media.folder}/posters/${pad2(slot)}.jpg${mediaQuery}`
+    : undefined;
+  const mobileVideoPoster = useMobile
+    ? `/media/${media?.folder}/mobile/posters/${pad2(slot)}.jpg${mediaQuery}`
+    : undefined;
   return <figure className={`placeholder ${tone}${src ? ' has-media' : ''}${src === '/media/dji-romo/10.mp4' ? ' trim-edge' : ''}`} style={size ? { '--media-ratio': `${size.width} / ${size.height}` } as CSSProperties : undefined} data-slot={pad2(slot)}>
     {mediaSrc && (media?.videos.has(slot)
       ? <ViewportVideo
           key={`${projectSlug}-${pad2(slot)}-video`}
           src={mediaSrc}
+          poster={videoPoster}
+          mobilePoster={mobileVideoPoster}
           width={size?.width}
           height={size?.height}
           mobile={useMobile}
