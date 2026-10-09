@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const LAYERS = 9;
+const MOTION_PREFERENCE_KEY = 'home-motion-enabled';
+
+type MotionControlState = 'hidden' | 'enable' | 'retry';
 
 const vertexShader = `#version 300 es
 precision highp float;
@@ -16,14 +19,17 @@ uniform vec2 uFit;
 uniform float uTime;
 uniform float uDpr;
 uniform float uDepth;
+uniform float uGyro;
 uniform float uTwinkle;
 uniform float uYLift;
 out float vAlpha;
 void main() {
   float depth = (aLayer - 0.5) * 0.7 * uDepth;
-  float yaw = uPointer.x * (0.2 + abs(depth) * 0.12) * uDepth;
-  float pitch = uPointer.y * (0.17 + abs(depth) * 0.1) * uDepth;
   vec2 p = aPosition * uFit * 1.3;
+  p += vec2(uPointer.x, -uPointer.y) * depth * 0.34 * uGyro;
+  float rotation = mix(1.0, 0.3, uGyro);
+  float yaw = uPointer.x * (0.2 + abs(depth) * 0.12) * uDepth * rotation;
+  float pitch = uPointer.y * (0.17 + abs(depth) * 0.1) * uDepth * rotation;
   float x = p.x * cos(yaw) + depth * sin(yaw);
   float z = -p.x * sin(yaw) + depth * cos(yaw);
   float y = p.y * cos(pitch) - z * sin(pitch);
@@ -82,6 +88,8 @@ export function HomeParticleField({
   const fieldRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [motionControl, setMotionControl] = useState<MotionControlState>('hidden');
+  const startMotionRef = useRef<(() => Promise<void>) | null>(null);
   const onReadyRef = useRef(onReady);
   const onProgressRef = useRef(onProgress);
   onReadyRef.current = onReady;
@@ -93,11 +101,22 @@ export function HomeParticleField({
     const canvas = canvasRef.current;
     if (!field || !image || !canvas) return;
 
+    const resetUrl = new URL(window.location.href);
+    if (resetUrl.searchParams.has('reset-motion')) {
+      try {
+        window.localStorage.removeItem(MOTION_PREFERENCE_KEY);
+      } catch {
+        // The reset still removes the query marker when storage is unavailable.
+      }
+      resetUrl.searchParams.delete('reset-motion');
+      window.history.replaceState(window.history.state, '', resetUrl);
+    }
+
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const isMobile = window.matchMedia('(max-width: 800px), (pointer: coarse)').matches;
     // ponytail: never treat saveData as "show static photo" — keep trying WebGL
     const quiet = reducedMotion.matches;
-    const pointerInteractive = !isMobile && !quiet;
+    let pointerInteractive = !isMobile && !quiet;
     const depthAmount = quiet ? 0 : 1;
     // Mobile: stronger twinkle replaces removed gyro life.
     const twinkleAmount = quiet ? 0 : isMobile ? 2.8 : 1;
@@ -106,6 +125,7 @@ export function HomeParticleField({
 
     let gl: WebGL2RenderingContext | null = null;
     let frame = 0;
+    let motionSetupFrame = 0;
     let visible = false;
     let destroyed = false;
     let blobUrl: string | undefined;
@@ -121,6 +141,11 @@ export function HomeParticleField({
     let pointerY = 0;
     let targetX = 0;
     let targetY = 0;
+    let motionListening = false;
+    let motionConfirmed = false;
+    let motionTimeout = 0;
+    let baselineBeta: number | null = null;
+    let baselineGamma: number | null = null;
     let fitX = 1;
     let fitY = 1;
     let dpr = 1;
@@ -133,6 +158,7 @@ export function HomeParticleField({
     let timeLocation: WebGLUniformLocation | null = null;
     let dprLocation: WebGLUniformLocation | null = null;
     let depthLocation: WebGLUniformLocation | null = null;
+    let gyroLocation: WebGLUniformLocation | null = null;
     let twinkleLocation: WebGLUniformLocation | null = null;
     let yLiftLocation: WebGLUniformLocation | null = null;
     const yLift = isMobile ? 0.04 : 0.28;
@@ -165,7 +191,7 @@ export function HomeParticleField({
       const delta = lastTime ? Math.min((time - lastTime) / 1000, 0.05) : 1 / 60;
       lastTime = time;
       if (pointerInteractive) {
-        const ease = reducedMotion.matches ? 1 : 1 - Math.exp(-12 * delta);
+        const ease = reducedMotion.matches ? 1 : 1 - Math.exp(-(isMobile ? 18 : 12) * delta);
         pointerX += (targetX - pointerX) * ease;
         pointerY += (targetY - pointerY) * ease;
       }
@@ -176,6 +202,7 @@ export function HomeParticleField({
       gl.uniform1f(timeLocation, reducedMotion.matches ? 0 : (time - startTime) / 1000);
       gl.uniform1f(dprLocation, dpr);
       gl.uniform1f(depthLocation, depthAmount);
+      gl.uniform1f(gyroLocation, isMobile ? 1 : 0);
       gl.uniform1f(twinkleLocation, twinkleAmount);
       gl.uniform1f(yLiftLocation, yLift);
       gl.drawArrays(gl.POINTS, 0, count);
@@ -203,6 +230,93 @@ export function HomeParticleField({
       targetX = 0;
       targetY = 0;
     };
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        baselineBeta = null;
+        baselineGamma = null;
+        onBlur();
+      }
+    };
+
+    const orientationConstructor = window.DeviceOrientationEvent as (typeof DeviceOrientationEvent & {
+      requestPermission?: () => Promise<'granted' | 'denied' | 'prompt'>;
+    }) | undefined;
+    const hasMotionPermissionApi = typeof orientationConstructor?.requestPermission === 'function';
+    const onDeviceOrientation = (event: DeviceOrientationEvent) => {
+      if (!visible || document.hidden || reducedMotion.matches || event.beta === null || event.gamma === null) return;
+      if (baselineBeta === null || baselineGamma === null) {
+        baselineBeta = event.beta;
+        baselineGamma = event.gamma;
+      }
+      const clamp = (value: number) => Math.max(-1, Math.min(1, value));
+      targetX = clamp((event.gamma - baselineGamma) / 32);
+      targetY = clamp((event.beta - baselineBeta) / 32);
+      pointerInteractive = true;
+      if (visible && !frame) frame = requestAnimationFrame(animate);
+      if (motionListening && !motionConfirmed) {
+        motionConfirmed = true;
+        window.clearTimeout(motionTimeout);
+        try {
+          window.localStorage.setItem(MOTION_PREFERENCE_KEY, '1');
+        } catch {
+          // Motion still works when browser storage is unavailable.
+        }
+        setMotionControl('hidden');
+      }
+    };
+    const stopMotion = () => {
+      if (motionListening) window.removeEventListener('deviceorientation', onDeviceOrientation);
+      motionListening = false;
+      motionConfirmed = false;
+      window.clearTimeout(motionTimeout);
+      pointerInteractive = !isMobile && !reducedMotion.matches;
+      baselineBeta = null;
+      baselineGamma = null;
+      onBlur();
+      window.removeEventListener('blur', onBlur);
+      try {
+        window.localStorage.removeItem(MOTION_PREFERENCE_KEY);
+      } catch {
+        // Motion can still be disabled when browser storage is unavailable.
+      }
+      setMotionControl(isMobile && !reducedMotion.matches ? 'enable' : 'hidden');
+      if (visible && !frame && !reducedMotion.matches) frame = requestAnimationFrame(animate);
+    };
+    const listenForMotion = () => {
+      if (motionListening || !orientationConstructor || reducedMotion.matches) return;
+      baselineBeta = null;
+      baselineGamma = null;
+      motionListening = true;
+      motionConfirmed = false;
+      window.addEventListener('deviceorientation', onDeviceOrientation, { passive: true });
+      window.addEventListener('blur', onBlur);
+      setMotionControl('hidden');
+      motionTimeout = window.setTimeout(() => {
+        if (!motionListening || motionConfirmed) return;
+        window.removeEventListener('deviceorientation', onDeviceOrientation);
+        window.removeEventListener('blur', onBlur);
+        motionListening = false;
+        setMotionControl('retry');
+      }, 1800);
+    };
+    const startMotion = async () => {
+      if (!orientationConstructor || reducedMotion.matches) return;
+      setMotionControl('hidden');
+      try {
+        if (hasMotionPermissionApi) {
+          const permission = await orientationConstructor.requestPermission!();
+          if (permission !== 'granted') {
+            setMotionControl('retry');
+            return;
+          }
+        }
+        listenForMotion();
+        setMotionControl('hidden');
+      } catch {
+        setMotionControl('retry');
+      }
+    };
+    startMotionRef.current = startMotion;
 
     let readyNotified = false;
     let readyWatchdog = 0;
@@ -310,8 +424,8 @@ export function HomeParticleField({
 
             if (light < 0.15) continue;
             const core = Math.pow((light - 0.15) / 0.85, 1.28);
-            let expectedMid = core * (isMobile ? 2.4 : 3.15);
-            if (light > 0.52) expectedMid += (light - 0.52) * (isMobile ? 2.4 : 3.1);
+            let expectedMid = core * (isMobile ? 3.5 : 3.15);
+            if (light > 0.52) expectedMid += (light - 0.52) * (isMobile ? 4 : 3.1);
             const whole = Math.floor(expectedMid);
             const extras = whole + (random() < expectedMid - whole ? 1 : 0);
             for (let n = 0; n < extras; n++) {
@@ -351,6 +465,7 @@ export function HomeParticleField({
         timeLocation = gl.getUniformLocation(program, 'uTime');
         dprLocation = gl.getUniformLocation(program, 'uDpr');
         depthLocation = gl.getUniformLocation(program, 'uDepth');
+        gyroLocation = gl.getUniformLocation(program, 'uGyro');
         twinkleLocation = gl.getUniformLocation(program, 'uTwinkle');
         yLiftLocation = gl.getUniformLocation(program, 'uYLift');
         gl.enable(gl.BLEND);
@@ -370,6 +485,8 @@ export function HomeParticleField({
     const onMotionPreferenceChange = () => {
       onBlur();
       if (reducedMotion.matches) {
+        stopMotion();
+        setMotionControl('hidden');
         cancelAnimationFrame(frame);
         frame = 0;
         draw(0);
@@ -378,6 +495,7 @@ export function HomeParticleField({
 
     const observer = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
+      if (!visible) onBlur();
       if (visible && !frame && !reducedMotion.matches) frame = requestAnimationFrame(animate);
       else if (!visible) {
         cancelAnimationFrame(frame);
@@ -392,6 +510,19 @@ export function HomeParticleField({
       window.addEventListener('blur', onBlur);
     }
     reducedMotion.addEventListener('change', onMotionPreferenceChange);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    if (isMobile && !quiet && orientationConstructor) {
+      let motionPreferenceEnabled = false;
+      try {
+        motionPreferenceEnabled = window.localStorage.getItem(MOTION_PREFERENCE_KEY) === '1';
+      } catch {
+        // Treat unavailable storage as an unconfigured preference.
+      }
+      motionSetupFrame = requestAnimationFrame(() => {
+        if (motionPreferenceEnabled) listenForMotion();
+        else setMotionControl('enable');
+      });
+    }
 
     const boot = async () => {
       try {
@@ -440,6 +571,7 @@ export function HomeParticleField({
       destroyed = true;
       window.clearTimeout(readyWatchdog);
       cancelAnimationFrame(frame);
+      cancelAnimationFrame(motionSetupFrame);
       if (blobUrl) URL.revokeObjectURL(blobUrl);
       image.onload = null;
       image.onerror = null;
@@ -449,7 +581,12 @@ export function HomeParticleField({
         window.removeEventListener('pointermove', onPointerMove);
         window.removeEventListener('blur', onBlur);
       }
+      if (motionListening) window.removeEventListener('deviceorientation', onDeviceOrientation);
+      window.removeEventListener('blur', onBlur);
+      window.clearTimeout(motionTimeout);
+      startMotionRef.current = null;
       reducedMotion.removeEventListener('change', onMotionPreferenceChange);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       if (gl && vao) gl.deleteVertexArray(vao);
       if (gl && buffer) gl.deleteBuffer(buffer);
       if (gl && program) gl.deleteProgram(program);
@@ -460,5 +597,13 @@ export function HomeParticleField({
     {/* eslint-disable-next-line @next/next/no-img-element -- sampling source for WebGL only; never shown */}
     <img ref={imageRef} alt="" draggable={false} decoding="async" aria-hidden="true" />
     <canvas ref={canvasRef} aria-hidden="true" />
+    <button
+      className="cf-motion-orb"
+      type="button"
+      aria-label={motionControl === 'retry' ? 'Retry device motion / 重试陀螺仪视差' : 'Enable device motion / 开启陀螺仪视差'}
+      disabled={motionControl === 'hidden'}
+      hidden={motionControl === 'hidden'}
+      onClick={() => void startMotionRef.current?.()}
+    />
   </div>;
 }

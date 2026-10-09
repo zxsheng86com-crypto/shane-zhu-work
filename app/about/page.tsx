@@ -96,7 +96,6 @@ export default function About() {
         <div className="about-reference-table">
           <a className="about-reference-row about-reference-contact-row" href="tel:+8613232762061"><p>Phone</p><p>+86 132 3276 2061</p><span aria-hidden="true">↗</span></a>
           <a className="about-reference-row about-reference-contact-row" href="mailto:825921813@qq.com"><p>E-mail</p><p>825921813@qq.com</p><span aria-hidden="true">↗</span></a>
-          <a className="about-reference-row about-reference-contact-row" href="/朱晓生简历.pdf" target="_blank" rel="noreferrer"><p><Localized en="Résumé" zh="简历" /></p><p><Localized en="Open PDF" zh="打开 PDF" /></p><span aria-hidden="true">↗</span></a>
         </div>
       </section>
     </main>

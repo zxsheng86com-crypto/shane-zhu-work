@@ -6,6 +6,7 @@ export default function Work() {
     <Header />
     <HomeProjectPrefetch />
     <main className="work-index">
+      <h1 className="work-index-heading">My Work</h1>
       <ProjectGrid />
     </main>
   </>;
