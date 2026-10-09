@@ -7,6 +7,7 @@ import { SiteFoot } from './site-foot';
 export const metadata: Metadata = {
   title: 'Shane Zhu-UI Designer',
   description: 'Independent designer portfolio and selected case studies.',
+  icons: { icon: '/favicon.svg?v=2' },
 };
 
 export default function RootLayout({
