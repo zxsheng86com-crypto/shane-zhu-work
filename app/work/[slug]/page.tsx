@@ -75,6 +75,8 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
     ? `${src}?v=20261008-faststart`
     : src === '/media/dji-avinox/08.webp'
     ? `${src}?v=20261008-avinox-08`
+    : src === '/media/dji-power/09.webp'
+    ? `${src}?v=20261009-power-09`
     : src && projectSlug === 'dji-power'
     ? `${src}?v=20261008-media`
     : src && projectSlug === 'dji-aura'

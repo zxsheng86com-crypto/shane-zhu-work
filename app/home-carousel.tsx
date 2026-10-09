@@ -315,7 +315,10 @@ export function HomeCarousel() {
 
       void Promise.all(
         LETTER_FILES.map(async (name, index) => {
-          const data = await loadJson(`/lottie/letters/${name}.json`);
+          const url = name === 'H1'
+            ? '/lottie/letters/H1.json?v=20261009-h1-3'
+            : `/lottie/letters/${name}.json`;
+          const data = await loadJson(url);
           markLottieProgress(40 + ((index + 1) / LETTER_FILES.length) * 35);
           return { name, data };
         }),
@@ -561,7 +564,7 @@ export function HomeCarousel() {
       <div ref={trackRef} className="cf-covers-track cf-covers-desktop" style={{ height: `${featured.length + 1}00vh` }}>
         <div className="cf-covers-sticky">
           {featured.map((project, index) => <Link className="cf-cover" href={`/work/${project.slug}`} key={project.slug} ref={(element) => { coverRefs.current[index] = element; }}>
-            {coverMode === 'desktop' ? <Image src={coverFor(project)} alt="" fill sizes="100vw" loading="lazy" unoptimized draggable={false} /> : null}
+            {coverMode === 'desktop' ? <Image src={coverFor(project)} alt="" fill sizes="100vw" loading="lazy" unoptimized draggable={false} data-pin-nopin="true" data-pin-no-hover="true" /> : null}
             <span className="cf-project-index">{String(index + 1).padStart(2, '0')}</span>
             <span className="cf-project-name">{String(project.titleEn ?? project.title).split('').map((character, letter) => <span className="cf-name-letter" key={`${character}-${letter}`}>{character === ' ' ? '\u00a0' : character}</span>)}</span>
             <span className="cf-project-description">

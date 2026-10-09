@@ -595,7 +595,7 @@ export function HomeParticleField({
 
   return <div ref={fieldRef} className="cf-hero-particles">
     {/* eslint-disable-next-line @next/next/no-img-element -- sampling source for WebGL only; never shown */}
-    <img ref={imageRef} alt="" draggable={false} decoding="async" aria-hidden="true" />
+    <img ref={imageRef} alt="" draggable={false} decoding="async" aria-hidden="true" data-pin-nopin="true" data-pin-no-hover="true" />
     <canvas ref={canvasRef} aria-hidden="true" />
     <button
       className="cf-motion-orb"

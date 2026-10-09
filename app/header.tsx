@@ -76,7 +76,7 @@ export function Header() {
   const links = <><Link className={pathname === '/work' ? 'active' : ''} href="/work" aria-label="Work" aria-current={pathname === '/work' ? 'page' : undefined}>Work</Link><Link className={pathname.startsWith('/about') ? 'active' : ''} href="/about" aria-label="About" aria-current={pathname.startsWith('/about') ? 'page' : undefined}>About</Link></>;
 
   /* the designed logo mark is used on every page */
-  const identity = <img className="nav-logo" src="/logo.svg" alt="Shane Zhu" />;
+  const identity = <img className="nav-logo" src="/logo.svg" alt="Shane Zhu" data-pin-nopin="true" data-pin-no-hover="true" />;
 
   return <header ref={headerRef} className={`nav nav-home${hidden ? ' nav-hidden' : ''}${menuOpen ? ' is-menu-open' : ''}`} onKeyDown={(event) => {
     if (event.key === 'Escape' && menuOpen) {

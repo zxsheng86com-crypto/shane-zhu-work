@@ -61,6 +61,8 @@ export default function About() {
               height={1049}
               decoding="async"
               fetchPriority="high"
+              data-pin-nopin="true"
+              data-pin-no-hover="true"
             />
           </div>
           <figcaption><Localized en="Shane Zhu" zh="朱晓生" /><br /><Localized en="Senior UI Designer · Shenzhen, CN" zh="高级 UI 设计师 · 中国深圳" /></figcaption>

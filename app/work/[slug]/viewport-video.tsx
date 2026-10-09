@@ -343,6 +343,8 @@ export function ViewportVideo({
         draggable={false}
         controlsList="nodownload nofullscreen"
         disablePictureInPicture
+        data-pin-nopin="true"
+        data-pin-no-hover="true"
       >
         {mobile && mobileSrc !== src ? <source src={mobileSrc} media="(max-width: 1024px), (pointer: coarse)" type="video/mp4" /> : null}
         <source src={src} type="video/mp4" />

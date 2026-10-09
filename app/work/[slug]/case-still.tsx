@@ -110,6 +110,7 @@ export function CaseStill({
           decoding="async"
           draggable={false}
           data-pin-nopin="true"
+          data-pin-no-hover="true"
         />
       </picture>
       <span className="case-video-mask" aria-hidden />

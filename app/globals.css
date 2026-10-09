@@ -41,7 +41,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .language-toggle{display:flex;align-items:center;justify-content:center;flex:0 0 3.2em;width:3.2em;height:1em;margin:0;padding:0;border:0;background:transparent;color:#7d7d7d;font-family:Aspekta,Arial,sans-serif;font-size:18.75px;font-weight:500;letter-spacing:.2px;line-height:1;text-align:center;cursor:pointer;transition:color .2s ease;-webkit-tap-highlight-color:transparent}
 .language-toggle-content{display:flex;align-items:center;gap:.08em;white-space:nowrap}
 .language-toggle i{font:inherit;font-style:normal;color:inherit;pointer-events:none}
-.language-option-zh{display:inline-block;font-family:"OPPO Sans 4.0","OPPO Sans",sans-serif;font-size: 18.75px;font-weight: 600;line-height:1}
+.language-option-zh{display:inline-block;font-family:"OPPO Sans 4.0","OPPO Sans",sans-serif;font-size:16.75px;font-weight:600;line-height:1}
 @media(hover:hover){
   .nav nav>a:hover,.nav nav>a:focus-visible,.wordmark:hover,.wordmark:focus-visible{color:#fff;opacity:1}
   .wordmark:hover .nav-logo,.wordmark:focus-visible .nav-logo{filter:brightness(0) invert(1)}
