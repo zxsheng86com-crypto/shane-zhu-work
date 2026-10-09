@@ -63,11 +63,14 @@ export function Header() {
   };
 
   const languageToggle = (
-    <div className="language-toggle" role="group" aria-label="Language">
-      <button type="button" data-lang-option="en" aria-pressed={language === 'en'} aria-label="English" onClick={() => setSiteLanguage('en')}>E</button>
-      <i aria-hidden>/</i>
-      <button type="button" data-lang-option="zh" aria-pressed={language === 'zh'} aria-label="中文" onClick={() => setSiteLanguage('zh')}>Z</button>
-    </div>
+    <button
+      className="language-toggle"
+      type="button"
+      aria-label={language === 'en' ? 'Switch to Chinese' : 'Switch to English'}
+      onClick={() => setSiteLanguage(language === 'en' ? 'zh' : 'en')}
+    >
+      <span>{language === 'en' ? 'E' : '中'}</span><i aria-hidden="true">/</i><span>{language === 'en' ? '中' : 'E'}</span>
+    </button>
   );
 
   const links = <><Link className={pathname === '/work' ? 'active' : ''} href="/work" aria-label="Work" aria-current={pathname === '/work' ? 'page' : undefined}>Work</Link><Link className={pathname.startsWith('/about') ? 'active' : ''} href="/about" aria-label="About" aria-current={pathname.startsWith('/about') ? 'page' : undefined}>About</Link></>;
