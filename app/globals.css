@@ -35,11 +35,10 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .nav-desktop a{text-transform:capitalize}
 .nav nav>a{display:flex;align-items:center;height:auto;color:#7d7d7d;transition:color .25s ease}
 .nav nav>a.active{color:#7d7d7d}
-.language-toggle{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;justify-content:center;flex:0 0 3.2em;width:3.2em;height:1em;margin:0;padding:0;border:0;background:transparent;color:#7d7d7d;font-family:Aspekta,Arial,sans-serif;font-size:clamp(12px,.972vw,26px);font-weight:500;letter-spacing:.2px;line-height:1;text-align:center;cursor:pointer;transition:color .2s ease;-webkit-tap-highlight-color:transparent}
+.language-toggle{display:flex;align-items:center;justify-content:center;flex:0 0 3.2em;width:3.2em;height:1em;margin:0;padding:0;border:0;background:transparent;color:#7d7d7d;font-family:Aspekta,Arial,sans-serif;font-size:clamp(12px,.972vw,26px);font-weight:500;letter-spacing:.2px;line-height:1;text-align:center;cursor:pointer;transition:color .2s ease;-webkit-tap-highlight-color:transparent}
+.language-toggle-content{display:flex;align-items:center;gap:.08em;white-space:nowrap}
 .language-toggle i{font:inherit;font-style:normal;color:inherit;pointer-events:none}
-.language-option-zh{display:inline-block;font-size:calc(1em - 2px);line-height:1}
-.language-toggle[data-language="en"] i{transform:translateX(-.1em)}
-.language-toggle[data-language="zh"] i{transform:translateX(.1em)}
+.language-option-zh{display:inline-block;font-size:calc(1em - 2px);font-weight:700;line-height:1}
 @media(hover:hover){
   .nav nav>a:hover,.nav nav>a:focus-visible,.wordmark:hover,.wordmark:focus-visible{color:#fff;opacity:1}
   .wordmark:hover .nav-logo,.wordmark:focus-visible .nav-logo{filter:brightness(0) invert(1)}
@@ -260,8 +259,7 @@ html[data-lang="zh"] .case-text>.case-desc>.lang-zh{display:block!important}
     line-height:1.2;letter-spacing:.2px;text-align:left;text-transform:none;
   }
   .nav-mobile>a.active{color:#7d7d7d}
-  .nav-mobile .language-toggle{display:grid;grid-template-columns:auto auto auto;justify-content:start;flex:auto;width:100%;height:auto;gap:0;text-align:left;cursor:pointer}
-  .nav-mobile .language-toggle i{padding:0 2px;font-size:inherit;font-weight:inherit}
+  .nav-mobile .language-toggle{display:flex;justify-content:flex-start;flex:auto;width:100%;height:auto;gap:0;text-align:left;cursor:pointer}
   .nav-logo{height:18px;transform:none}
   .home-hero,.page-intro,.service-hero{min-height:430px;padding:160px 16px 48px}.home-hero h1,.page-intro h1,.service-hero h1{font-size:32px;line-height:1.2}
   .project-grid,.post-list{grid-template-columns:1fr 1fr}.services-home article,.featured-heading,.service-list article,.news-list article,.service-detail,.about-grid{grid-template-columns:1fr}.services-home article>a,.about-grid a{grid-column:1}
