@@ -66,6 +66,7 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
           ? { folder: 'dji-aura', slots: auraSlots, videos: auraVideos }
         : undefined;
   const src = media?.slots.has(slot) ? `/media/${media.folder}/${pad2(slot)}.${media.videos.has(slot) ? 'mp4' : 'webp'}` : undefined;
+  const firstVideoSlot = media ? Math.min(...media.videos) : -1;
   const dimensionMap = mediaDimensions as Record<string, { width: number; height: number }>;
   const size = src ? dimensionMap[src] ?? dimensionMap[src.replace(/\.webp$/, '.jpg')] : undefined;
   const mediaSrc = src === '/media/dji-aura/06.webp'
@@ -96,7 +97,7 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
           width={size?.width}
           height={size?.height}
           mobile={useMobile}
-          slot={slot}
+          eager={slot === firstVideoSlot}
         />
       : <CaseStill key={`${projectSlug}-${pad2(slot)}-still`} src={mediaSrc} mobileSrc={stillMobile} priority={shouldPriorityCaseSlot(slot)} />)}
     {showSlotNumber && <strong className="slot-number">{String(number).padStart(2, '0')}</strong>}

@@ -91,7 +91,7 @@ export function CaseStill({
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) setActive(true);
       else if (node.naturalWidth < 2) setActive(false);
-    }, { rootMargin: window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches ? '320px 0px' : '700px 0px', threshold: 0 });
+    }, { rootMargin: `${Math.max(900, Math.round(window.innerHeight * 1.25))}px 0px`, threshold: 0 });
     observer.observe(node);
     return () => observer.disconnect();
   }, [priority]);

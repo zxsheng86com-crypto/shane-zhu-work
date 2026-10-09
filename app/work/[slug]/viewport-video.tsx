@@ -57,19 +57,17 @@ export function ViewportVideo({
   width,
   height,
   mobile = false,
-  slot,
+  eager = false,
 }: {
   src: string;
   width?: number;
   height?: number;
   mobile?: boolean;
-  slot?: number;
+  eager?: boolean;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const loopDelayMs = Math.max(0, videoLoopDelays[stripQuery(src)] ?? 0);
   const mobileSrc = withQuery(src.replace(/\/([^/?]+)(\?.*)?$/, '/mobile/$1'), src);
-  // Pre-warm only the first one–two slots; everything else binds on approach.
-  const eager = typeof slot === 'number' && slot >= 1 && slot <= (isNarrowViewport() ? 1 : 2);
 
   const [activeSrc, setActiveSrc] = useState(() => pickSrc(src, mobileSrc, mobile));
   const [ready, setReady] = useState(false);
@@ -170,7 +168,7 @@ export function ViewportVideo({
 
     const freeze = () => {
       video.autoplay = false;
-      video.preload = 'metadata';
+      video.preload = near ? 'auto' : 'metadata';
       if (!video.paused) video.pause();
     };
 
@@ -202,7 +200,7 @@ export function ViewportVideo({
       bindGen += 1;
       video.dataset.bindGen = String(bindGen);
       video.dataset.want = want;
-      video.preload = 'metadata';
+      video.preload = near ? 'auto' : 'metadata';
       video.src = want;
       try {
         video.load();
@@ -219,7 +217,7 @@ export function ViewportVideo({
         if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) clearPipeline();
       }
     }, {
-      rootMargin: isNarrowViewport() ? '320px 0px' : '700px 0px',
+      rootMargin: `${Math.max(900, Math.round(window.innerHeight * 1.25))}px 0px`,
       threshold: 0,
     });
 
@@ -287,7 +285,10 @@ export function ViewportVideo({
     document.addEventListener('visibilitychange', onVisibility);
     reducedMotion.addEventListener('change', onVisibility);
 
-    if (eager) bindToWant();
+    if (eager) {
+      near = true;
+      bindToWant();
+    }
 
     return () => {
       cancelled = true;
