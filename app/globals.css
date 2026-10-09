@@ -23,22 +23,23 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 /* Site nav — homepage treatment applied globally.
    Padding uses fixed FALLBACK gutters (not live --sg-*), so Work/About/E·中
    do not jump when route changes clear/remeasure the Shane grid. */
-.nav{position:fixed;z-index:20;top:0;left:0;display:grid;grid-template-columns:auto 1fr;align-items:flex-start;width:100%;height:auto;padding:clamp(14px,1.25vw,30px) calc(.9375% - 2px) clamp(7px,.625vw,15px) .9375%;background:#000;color:#7d7d7d;font-family:Aspekta,Arial,sans-serif;font-size:clamp(12px,.972vw,26px);font-weight:500;line-height:1;letter-spacing:.2px;transition:opacity .7s ease,background-color .45s cubic-bezier(.22,1,.36,1),color .3s ease}
+.nav{position:fixed;z-index:20;top:0;left:0;display:grid;grid-template-columns:auto 1fr;align-items:flex-start;width:100%;height:auto;padding:18px calc(.9375% - 2px) 18px .9375%;background:#000;color:#7d7d7d;font-family:Aspekta,Arial,sans-serif;font-size:18.75px;font-weight:500;line-height:1;letter-spacing:.2px;transition:opacity .7s ease,background-color .45s cubic-bezier(.22,1,.36,1),color .3s ease}
 .nav,.nav *{font-family:Aspekta,Arial,sans-serif}
 .nav-hidden{transform:none}
 .nav-identity{display:flex;align-items:center;gap:10px}
-.wordmark{display:flex;align-items:center;height:auto;color:#7d7d7d;font-size:clamp(12px,.972vw,26px);font-weight:500;line-height:1;letter-spacing:.2px;transition:color .25s ease}
-.nav-logo{display:block;height:clamp(14px,1.18vw,26px);width:auto;transform:translateX(-2px);transition:filter .25s ease}
+.wordmark{display:flex;align-items:center;height:auto;color:#7d7d7d;font-size:18.75px;font-weight:500;line-height:1;letter-spacing:.2px;transition:color .25s ease}
+.nav-logo{display:block;height: 22px;width:auto;transform:translateX(-2px);transition:filter .25s ease}
 .nav-location{display:none}
 .nav nav{display:flex;align-items:center;gap:clamp(9px,.764vw,22px);font-family:inherit;font-size:inherit;font-weight:500;line-height:1;letter-spacing:.2px;text-transform:none}
-.nav-desktop{grid-column:2;justify-self:end;font-size:clamp(12px,.972vw,26px);font-weight:500;letter-spacing:.2px}
+.nav-desktop{grid-column:2;justify-self:end;font-size:18.75px;font-weight:500;letter-spacing:.2px}
+.nav-desktop>a+a{margin-left:.5em}
 .nav-desktop a{text-transform:capitalize}
 .nav nav>a{display:flex;align-items:center;height:auto;color:#7d7d7d;transition:color .25s ease}
 .nav nav>a.active{color:#7d7d7d}
-.language-toggle{display:flex;align-items:center;justify-content:center;flex:0 0 3.2em;width:3.2em;height:1em;margin:0;padding:0;border:0;background:transparent;color:#7d7d7d;font-family:Aspekta,Arial,sans-serif;font-size:clamp(12px,.972vw,26px);font-weight:500;letter-spacing:.2px;line-height:1;text-align:center;cursor:pointer;transition:color .2s ease;-webkit-tap-highlight-color:transparent}
+.language-toggle{display:flex;align-items:center;justify-content:center;flex:0 0 3.2em;width:3.2em;height:1em;margin:0;padding:0;border:0;background:transparent;color:#7d7d7d;font-family:Aspekta,Arial,sans-serif;font-size:18.75px;font-weight:500;letter-spacing:.2px;line-height:1;text-align:center;cursor:pointer;transition:color .2s ease;-webkit-tap-highlight-color:transparent}
 .language-toggle-content{display:flex;align-items:center;gap:.08em;white-space:nowrap}
 .language-toggle i{font:inherit;font-style:normal;color:inherit;pointer-events:none}
-.language-option-zh{display:inline-block;font-size:calc(1em - 4px);font-weight:800;line-height:1}
+.language-option-zh{display:inline-block;font-family:"OPPO Sans 4.0","OPPO Sans",sans-serif;font-size: 18.75px;font-weight: 600;line-height:1}
 @media(hover:hover){
   .nav nav>a:hover,.nav nav>a:focus-visible,.wordmark:hover,.wordmark:focus-visible{color:#fff;opacity:1}
   .wordmark:hover .nav-logo,.wordmark:focus-visible .nav-logo{filter:brightness(0) invert(1)}
