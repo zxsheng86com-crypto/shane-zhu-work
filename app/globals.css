@@ -500,12 +500,12 @@ html[data-lang="zh"] .cf-statement h2>.lang-zh{display:block!important}
   }
   .cf-motion-orb[hidden]{display:none!important}
   .cf-motion-orb:disabled{pointer-events:none}
-  .cf-motion-orb::before,.cf-motion-orb::after{position:absolute;display:block;content:"";border-radius:50%;pointer-events:none}
-  .cf-motion-orb::before{width:6px;height:6px;background:#fff;box-shadow:0 0 9px 2px rgba(255,255,255,.48);animation:cf-motion-orb-core 2s ease-in-out infinite}
-  .cf-motion-orb::after{inset:13px;border:1px solid rgba(255,255,255,.44);animation:cf-motion-orb-ring 2s ease-out infinite}
+  .cf-motion-orb::before,.cf-motion-orb::after{position:absolute;top:50%;left:50%;display:block;content:"";border-radius:50%;pointer-events:none}
+  .cf-motion-orb::before{width:12px;height:12px;background:#fff;box-shadow:0 0 9px 2px rgba(255,255,255,.48);animation:cf-motion-orb-core 2s ease-in-out infinite}
+  .cf-motion-orb::after{width:22px;height:22px;background:rgba(255,255,255,.24);filter:blur(3px);animation:cf-motion-orb-ring 2s ease-out infinite}
   .cf-motion-orb:focus-visible{outline:1px solid rgba(255,255,255,.7);outline-offset:3px}
-  @keyframes cf-motion-orb-core{0%,100%{transform:scale(.82);opacity:.7}50%{transform:scale(1.16);opacity:1}}
-  @keyframes cf-motion-orb-ring{0%{transform:scale(.65);opacity:.5}100%{transform:scale(1.45);opacity:0}}
+  @keyframes cf-motion-orb-core{0%,100%{transform:translate(-50%,-50%) scale(.82);opacity:.7}50%{transform:translate(-50%,-50%) scale(1.16);opacity:1}}
+  @keyframes cf-motion-orb-ring{0%{transform:translate(-50%,-50%) scale(.65);opacity:.5}100%{transform:translate(-50%,-50%) scale(1.45);opacity:0}}
   @media(prefers-reduced-motion:reduce){.cf-motion-orb::before,.cf-motion-orb::after{animation:none}}
   /* Fallback galaxy: drop the desktop lift so it matches centered particles */
   .cf-hero-particles img{transform:translateY(0) scale(1.2)}

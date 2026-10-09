@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const LAYERS = 9;
-const MOTION_PREFERENCE_KEY = 'home-motion-enabled';
+const MOTION_PREFERENCE_KEY = 'home-motion-enabled-v2';
 
 type MotionControlState = 'hidden' | 'enable' | 'retry';
 
