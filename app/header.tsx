@@ -66,10 +66,11 @@ export function Header() {
     <button
       className="language-toggle"
       type="button"
+      data-language={language}
       aria-label={language === 'en' ? 'Switch to Chinese' : 'Switch to English'}
       onClick={() => setSiteLanguage(language === 'en' ? 'zh' : 'en')}
     >
-      <span>{language === 'en' ? 'E' : '中'}</span><i aria-hidden="true">/</i><span>{language === 'en' ? '中' : 'E'}</span>
+      <span className={language === 'zh' ? 'language-option-zh' : undefined}>{language === 'en' ? 'E' : '中'}</span><i aria-hidden="true">/</i><span className={language === 'en' ? 'language-option-zh' : undefined}>{language === 'en' ? '中' : 'E'}</span>
     </button>
   );
 

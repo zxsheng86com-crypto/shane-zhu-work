@@ -37,6 +37,9 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .nav nav>a.active{color:#7d7d7d}
 .language-toggle{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;justify-content:center;flex:0 0 3.2em;width:3.2em;height:1em;margin:0;padding:0;border:0;background:transparent;color:#7d7d7d;font-family:Aspekta,Arial,sans-serif;font-size:clamp(12px,.972vw,26px);font-weight:500;letter-spacing:.2px;line-height:1;text-align:center;cursor:pointer;transition:color .2s ease;-webkit-tap-highlight-color:transparent}
 .language-toggle i{font:inherit;font-style:normal;color:inherit;pointer-events:none}
+.language-option-zh{display:inline-block;font-size:calc(1em - 2px);line-height:1}
+.language-toggle[data-language="en"] i{transform:translateX(-.1em)}
+.language-toggle[data-language="zh"] i{transform:translateX(.1em)}
 @media(hover:hover){
   .nav nav>a:hover,.nav nav>a:focus-visible,.wordmark:hover,.wordmark:focus-visible{color:#fff;opacity:1}
   .wordmark:hover .nav-logo,.wordmark:focus-visible .nav-logo{filter:brightness(0) invert(1)}
