@@ -54,15 +54,15 @@ function hasMobileStill(folder: string, slot: number) {
 
 function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true }: { number: number; projectSlug: string; tone?: string; showSlotNumber?: boolean }) {
   const slot = number;
-  const media = projectSlug === 'common-ground'
+  const media = projectSlug === 'dji-romo'
     ? { folder: 'dji-romo', slots: romoSlots, videos: romoVideos }
     : projectSlug === 'dji-avinox'
       ? { folder: 'dji-avinox', slots: avinoxSlots, videos: avinoxVideos }
       : projectSlug === 'dji-power'
         ? { folder: 'dji-power', slots: powerSlots, videos: powerVideos }
-        : projectSlug === 'dji-fly'
+        : projectSlug === 'fly-fpv-2-0'
           ? { folder: 'dji-fly', slots: flySlots, videos: flyVideos }
-        : projectSlug === 'dji-aura-logo'
+        : projectSlug === 'dji-aura'
           ? { folder: 'dji-aura', slots: auraSlots, videos: auraVideos }
         : undefined;
   const src = media?.slots.has(slot) ? `/media/${media.folder}/${pad2(slot)}.${media.videos.has(slot) ? 'mp4' : 'webp'}` : undefined;
@@ -77,13 +77,13 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
     ? `${src}?v=20261008-avinox-08`
     : src && projectSlug === 'dji-power'
     ? `${src}?v=20261008-media`
-    : src && projectSlug === 'dji-aura-logo'
+    : src && projectSlug === 'dji-aura'
       ? `${src}?v=20261008-media`
-    : src && projectSlug === 'dji-fly' && [7, 8, 10].includes(slot)
+    : src && projectSlug === 'fly-fpv-2-0' && [7, 8, 10].includes(slot)
       ? `${src}?v=20261008-fly-${pad2(slot)}`
-      : src && projectSlug === 'dji-fly'
+      : src && projectSlug === 'fly-fpv-2-0'
         ? `${src}?v=20261008-media`
-    : src && projectSlug === 'common-ground' ? `${src}?v=20261008-media`
+    : src && projectSlug === 'dji-romo' ? `${src}?v=20261008-media`
       : src && projectSlug === 'dji-avinox' ? `${src}?v=20261008-media` : src;
   const useMobile = Boolean(media && media.videos.has(slot) && hasMobileVideo(media.folder, slot));
   const stillMobile = media && !media.videos.has(slot) && hasMobileStill(media.folder, slot)
@@ -141,7 +141,7 @@ export default async function Project({ params }: { params: Promise<{ slug: stri
       <Placeholder number={1} projectSlug={slug} tone={project.color} />
 
       <RevealFlow>
-        {slug === 'dji-fly' ? <>
+        {slug === 'fly-fpv-2-0' ? <>
           <Story title="竖屏体验现状" titleEn="PORTRAIT EXPERIENCE" subtitle="图传小、入口分散，影响飞行操控" subtitleEn="A small live view and scattered entry points disrupt flight control" childrenEn="The existing portrait FPV interface gave limited space to the live view, while feature entry points were scattered and text-heavy, creating information overload. Even with a larger live view, the layout still lacked a clear hierarchy: the next action was unclear on entry, key controls lacked feedback, and panels could interrupt the live view during flight.">现有 FPV 界面图传较小，功能入口分散，文本信息偏多，容易造成信息过载。即使放大图传后，画面仍缺少清晰主次：进入 FPV 时下一步不够明确，操控时重点操作缺少反馈，飞行中面板又容易打断图传画面。</Story>
           <section className="media-block media-pair"><Placeholder number={2} projectSlug={slug} /><Placeholder number={3} projectSlug={slug} /></section>
 
@@ -251,7 +251,7 @@ export default async function Project({ params }: { params: Promise<{ slug: stri
           <Story title="白牌项目" titleEn="WHITE-LABEL PROJECTS" subtitle="以模块化设计适配不同市场" subtitleEn="Modular design for different markets" childrenEn="For overseas tariff and compliance requirements, a white-label UI strategy retained the core interaction model while removing or recomposing brand elements through modular visual replacement. This met local compliance and brand needs while reducing the cost of parallel design and development.">面向海外市场的关税与合规要求，制定白牌机型 UI 适配策略。在保留核心交互逻辑的基础上，通过品牌元素剥离与视觉模块替换，满足不同市场的合规与品牌需求，并降低多版本并行的设计与开发成本。</Story>
           <section className="media-block media-pair"><Placeholder number={16} projectSlug={slug} /><Placeholder number={17} projectSlug={slug} /></section>
           <section className="media-block"><Placeholder number={18} projectSlug={slug} /></section>
-        </> : slug === 'dji-aura-logo' ? <>
+        </> : slug === 'dji-aura' ? <>
           <Story title="LOGO DESIGN" subtitle="灵光与影像" subtitleEn="Aura and imagery" childrenEn="The DJI AURA mark brings together two ideas: aura and imagery. A radiating flame turns light and presence into a symbol of memories preserved in the cloud. A play icon is embedded in the form to represent both photos and video.">
             DJI AURA 的标志围绕“灵光”与“影像”两个概念展开。“Aura”意为光环与气息，设计将其转化为向外迸发的光焰，表达云端相册对影像记忆的保存与延续；同时将播放键的几何轮廓融入图形，回应照片与视频的媒体属性。
           </Story>
@@ -265,7 +265,7 @@ export default async function Project({ params }: { params: Promise<{ slug: stri
           <section className="media-block"><Placeholder number={11} projectSlug={slug} /></section>
           <section className="media-block"><Placeholder number={12} projectSlug={slug} /></section>
         </> : <>
-        {slug === 'common-ground' ? <>
+        {slug === 'dji-romo' ? <>
           <Story title="核心挑战" titleEn="CORE CHALLENGE" subtitle="在成熟品类中建立产品辨识度" subtitleEn="Building distinction in a mature category" childrenEn="After years of development, robot vacuums have matured in both features and interaction patterns, and competitors’ software visuals have grown increasingly alike. As a new entrant, DJI’s core goal for ROMO was to deliver a differentiated product experience. The transparent body and precision structure already give the hardware a distinctive identity; for ROMO, the core challenge in software design was building from the ground up a visual system that connects to the hardware and carries the aesthetics of its industrial design.">扫拖机器人市场经过多年发展，产品功能与交互方式已高度成熟，竞品的软件视觉逐渐趋同。大疆作为入局者，如何给到市场差异化的产品体验是 ROMO 的核心目标。透明机身与精密结构已经赋予硬件外观鲜明的产品识别，对 ROMO 来说，从 0 到 1 建立一套与硬件关联、承载 ID 美学特征的视觉体系，是软件设计的核心挑战。</Story>
           <section className="media-block"><Placeholder number={2} projectSlug={slug} /></section>
 
@@ -277,39 +277,39 @@ export default async function Project({ params }: { params: Promise<{ slug: stri
           <section className="media-block"><Placeholder number={3} projectSlug={slug} /></section>
         </>}
 
-        <Story title="APP ICON" subtitle={slug === 'common-ground' ? '从清洁轨迹建立品牌识别' : undefined} subtitleEn={slug === 'common-ground' ? 'Building recognition from cleaning motion' : undefined} childrenEn={slug === 'common-ground' ? 'The icon extracts the spreading and suction paths of the robot’s cleaning motion and turns them into a concise graphic language.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'common-ground' ? 'APP ICON 从扫地机器人清洁时的扩散、吸入的运动轨迹提取特征，将其转化为简洁的图形语言。' : description}</Story>
+        <Story title="APP ICON" subtitle={slug === 'dji-romo' ? '从清洁轨迹建立品牌识别' : undefined} subtitleEn={slug === 'dji-romo' ? 'Building recognition from cleaning motion' : undefined} childrenEn={slug === 'dji-romo' ? 'The icon extracts the spreading and suction paths of the robot’s cleaning motion and turns them into a concise graphic language.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'dji-romo' ? 'APP ICON 从扫地机器人清洁时的扩散、吸入的运动轨迹提取特征，将其转化为简洁的图形语言。' : description}</Story>
         <section className="media-block media-pair"><Placeholder number={4} projectSlug={slug} /><Placeholder number={5} projectSlug={slug} /></section>
 
-        <Story title="HOME PAGE" subtitle={slug === 'common-ground' ? '以简驭繁，让设备状态直观可见' : undefined} subtitleEn={slug === 'common-ground' ? 'A restrained interface that makes status visible' : undefined} childrenEn={slug === 'common-ground' ? 'Most category home screens use a static product image on white, carrying no status information. ROMO makes the animated device the visual focus and keeps the surrounding UI restrained. Users can understand live operating states directly from the home screen.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'common-ground' ? '同类产品的首页通常以白底静态设备图，设备图本身不承载状态信息。ROMO 以设备动态效果作为视觉核心，UI 保持克制、直白，通过简洁界面衬托透明 ID 的精密结构。用户在首页可以直观了解设备的实时运行状态变化。' : description}</Story>
+        <Story title="HOME PAGE" subtitle={slug === 'dji-romo' ? '以简驭繁，让设备状态直观可见' : undefined} subtitleEn={slug === 'dji-romo' ? 'A restrained interface that makes status visible' : undefined} childrenEn={slug === 'dji-romo' ? 'Most category home screens use a static product image on white, carrying no status information. ROMO makes the animated device the visual focus and keeps the surrounding UI restrained. Users can understand live operating states directly from the home screen.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'dji-romo' ? '同类产品的首页通常以白底静态设备图，设备图本身不承载状态信息。ROMO 以设备动态效果作为视觉核心，UI 保持克制、直白，通过简洁界面衬托透明 ID 的精密结构。用户在首页可以直观了解设备的实时运行状态变化。' : description}</Story>
         <section className="media-block media-pair"><Placeholder number={6} projectSlug={slug} /><Placeholder number={7} projectSlug={slug} /></section>
         <section className="media-block"><Placeholder number={8} projectSlug={slug} /></section>
         <section className="media-block"><Placeholder number={9} projectSlug={slug} /></section>
 
-        <Story title="桌面小组件" titleEn="HOME WIDGET" subtitle={slug === 'common-ground' ? '将设备状态延伸至系统桌面' : undefined} subtitleEn={slug === 'common-ground' ? 'Extending device status to the system home screen' : undefined} childrenEn={slug === 'common-ground' ? 'The widget carries the home screen’s status-led approach into the system layer, surfacing operating states and frequent actions without opening the app.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'common-ground' ? '小组件延续首页的设备状态可视化的表达，将运行状态与常用功能带到系统桌面，使用户无需进入 App 即可了解设备情况。' : description}</Story>
+        <Story title="桌面小组件" titleEn="HOME WIDGET" subtitle={slug === 'dji-romo' ? '将设备状态延伸至系统桌面' : undefined} subtitleEn={slug === 'dji-romo' ? 'Extending device status to the system home screen' : undefined} childrenEn={slug === 'dji-romo' ? 'The widget carries the home screen’s status-led approach into the system layer, surfacing operating states and frequent actions without opening the app.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'dji-romo' ? '小组件延续首页的设备状态可视化的表达，将运行状态与常用功能带到系统桌面，使用户无需进入 App 即可了解设备情况。' : description}</Story>
         <section className="media-block"><Placeholder number={10} projectSlug={slug} /></section>
 
-        <Story title="定时清洁" titleEn="SCHEDULED CLEANING" subtitle={slug === 'common-ground' ? '让任务状态可感知' : undefined} subtitleEn={slug === 'common-ground' ? 'Making task status immediately perceptible' : undefined} childrenEn={slug === 'common-ground' ? 'When a schedule starts, the alarm icon enters a dedicated motion state. This distinguishes scheduled from manual cleaning and confirms both task source and activation.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'common-ground' ? '定时任务触发时，首页闹钟图标进入专属执行动效，区分定时计划与手动任务，让用户直接确认任务来源与生效状态。' : description}</Story>
+        <Story title="定时清洁" titleEn="SCHEDULED CLEANING" subtitle={slug === 'dji-romo' ? '让任务状态可感知' : undefined} subtitleEn={slug === 'dji-romo' ? 'Making task status immediately perceptible' : undefined} childrenEn={slug === 'dji-romo' ? 'When a schedule starts, the alarm icon enters a dedicated motion state. This distinguishes scheduled from manual cleaning and confirms both task source and activation.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'dji-romo' ? '定时任务触发时，首页闹钟图标进入专属执行动效，区分定时计划与手动任务，让用户直接确认任务来源与生效状态。' : description}</Story>
         <section className="media-block media-stack reverse"><div><Placeholder number={11} projectSlug={slug} /><Placeholder number={12} projectSlug={slug} /></div><Placeholder number={13} projectSlug={slug} /></section>
 
-        <Story title="基站功能" titleEn="BASE STATION" subtitle={slug === 'common-ground' ? '耗材与运行状态直接可见' : undefined} subtitleEn={slug === 'common-ground' ? 'Consumables and operation, directly visible' : undefined} childrenEn={slug === 'common-ground' ? 'The base-station entry reveals dust-bag and mop status through a transparent structure, then uses entry and running motion to show task progress. Motion focuses on reusable components rather than the full device, allowing the system to adapt to future models and hardware changes. This component-level approach has since been reused on later models.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'common-ground' ? '基站入口通过透明结构呈现尘袋、拖布等耗材状态，执行任务时以进入与运行动态反馈当前进程。弹窗动效聚焦关键部件而非完整设备外形，使同一套表达能够适配后续机型与产品结构变化，并已在后续机型中复用。' : description}</Story>
+        <Story title="基站功能" titleEn="BASE STATION" subtitle={slug === 'dji-romo' ? '耗材与运行状态直接可见' : undefined} subtitleEn={slug === 'dji-romo' ? 'Consumables and operation, directly visible' : undefined} childrenEn={slug === 'dji-romo' ? 'The base-station entry reveals dust-bag and mop status through a transparent structure, then uses entry and running motion to show task progress. Motion focuses on reusable components rather than the full device, allowing the system to adapt to future models and hardware changes. This component-level approach has since been reused on later models.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'dji-romo' ? '基站入口通过透明结构呈现尘袋、拖布等耗材状态，执行任务时以进入与运行动态反馈当前进程。弹窗动效聚焦关键部件而非完整设备外形，使同一套表达能够适配后续机型与产品结构变化，并已在后续机型中复用。' : description}</Story>
         <section className="media-block"><Placeholder number={14} projectSlug={slug} /></section>
         <section className="media-block media-pair"><Placeholder number={15} projectSlug={slug} /><Placeholder number={16} projectSlug={slug} /></section>
         <section className="media-block"><Placeholder number={17} projectSlug={slug} /></section>
 
-        <Story title="地图设计" titleEn="MAP DESIGN" subtitle={slug === 'common-ground' ? '减少装饰色彩，突出路径与操作' : undefined} subtitleEn={slug === 'common-ground' ? 'Less decorative colour, clearer paths and actions' : undefined} childrenEn={slug === 'common-ground' ? 'Competitors often use multiple colours to separate rooms, although repeated colours do not express real spatial relationships. After exploring both multi-colour and restrained directions, ROMO chose the latter to prioritise routes, operating state, and editing actions. Furniture, no-go zones, and thresholds share consistent selection and editing rules to keep complex operations clear.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'common-ground' ? '同类竞品地图通常使用多种色块区分房间，但重复出现的颜色并不能表达房间之间的实际关系。基于多色与克制两套方向探索，最终选择克制方向，以减少装饰性色彩，将视觉重点留给设备路径、运行状态和编辑操作；同时为家具、禁区、门槛等地图元素建立统一的选择与编辑方式，使复杂操作保持清晰一致。' : description}</Story>
+        <Story title="地图设计" titleEn="MAP DESIGN" subtitle={slug === 'dji-romo' ? '减少装饰色彩，突出路径与操作' : undefined} subtitleEn={slug === 'dji-romo' ? 'Less decorative colour, clearer paths and actions' : undefined} childrenEn={slug === 'dji-romo' ? 'Competitors often use multiple colours to separate rooms, although repeated colours do not express real spatial relationships. After exploring both multi-colour and restrained directions, ROMO chose the latter to prioritise routes, operating state, and editing actions. Furniture, no-go zones, and thresholds share consistent selection and editing rules to keep complex operations clear.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'dji-romo' ? '同类竞品地图通常使用多种色块区分房间，但重复出现的颜色并不能表达房间之间的实际关系。基于多色与克制两套方向探索，最终选择克制方向，以减少装饰性色彩，将视觉重点留给设备路径、运行状态和编辑操作；同时为家具、禁区、门槛等地图元素建立统一的选择与编辑方式，使复杂操作保持清晰一致。' : description}</Story>
         <section className="media-block"><Placeholder number={18} projectSlug={slug} /></section>
         <section className="media-block media-pair"><Placeholder number={19} projectSlug={slug} /><Placeholder number={20} projectSlug={slug} /></section>
 
-        <Story title="清洁模式" titleEn="CLEANING MODES" subtitle={slug === 'common-ground' ? '统一规则承载复杂参数' : undefined} subtitleEn={slug === 'common-ground' ? 'One rule set for complex parameters' : undefined} childrenEn={slug === 'common-ground' ? 'A consistent “information left, controls right” layout reduces interaction to taps and sliders. This lowers the cost of understanding complex settings, leaves room for future options, and adds animated icons to reinforce level changes.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'common-ground' ? '清洁模式采用“左侧信息、右侧控件”的统一布局，将操作收敛为点按与滑动两类控件，在降低复杂参数理解成本的同时，为后续新增设置项保留扩展空间。同时新增不同档位的 Icon 动效，提升交互反馈体验。' : description}</Story>
+        <Story title="清洁模式" titleEn="CLEANING MODES" subtitle={slug === 'dji-romo' ? '统一规则承载复杂参数' : undefined} subtitleEn={slug === 'dji-romo' ? 'One rule set for complex parameters' : undefined} childrenEn={slug === 'dji-romo' ? 'A consistent “information left, controls right” layout reduces interaction to taps and sliders. This lowers the cost of understanding complex settings, leaves room for future options, and adds animated icons to reinforce level changes.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'dji-romo' ? '清洁模式采用“左侧信息、右侧控件”的统一布局，将操作收敛为点按与滑动两类控件，在降低复杂参数理解成本的同时，为后续新增设置项保留扩展空间。同时新增不同档位的 Icon 动效，提升交互反馈体验。' : description}</Story>
         <section className="media-block media-pair"><Placeholder number={21} projectSlug={slug} /><Placeholder number={22} projectSlug={slug} /></section>
 
-        <Story title="设备设置" titleEn="DEVICE SETTINGS" subtitle={slug === 'common-ground' ? '将设备逻辑转化为可视化反馈' : undefined} subtitleEn={slug === 'common-ground' ? 'Turning device logic into visual feedback' : undefined} childrenEn={slug === 'common-ground' ? 'Pet and carpet modes involve internal behaviours that text and parameters cannot explain alone. Device motion and state graphics demonstrate the change directly, helping users understand each mode before enabling it.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'common-ground' ? '宠物模式、地毯模式等设置涉及设备内部的运行逻辑，仅靠文字和参数难以理解。设计通过设备动效与状态图形直接演示模式变化，让用户在设置前即可理解功能作用。' : description}</Story>
+        <Story title="设备设置" titleEn="DEVICE SETTINGS" subtitle={slug === 'dji-romo' ? '将设备逻辑转化为可视化反馈' : undefined} subtitleEn={slug === 'dji-romo' ? 'Turning device logic into visual feedback' : undefined} childrenEn={slug === 'dji-romo' ? 'Pet and carpet modes involve internal behaviours that text and parameters cannot explain alone. Device motion and state graphics demonstrate the change directly, helping users understand each mode before enabling it.' : 'This chapter introduces the design decisions and the work shown below.'}>{slug === 'dji-romo' ? '宠物模式、地毯模式等设置涉及设备内部的运行逻辑，仅靠文字和参数难以理解。设计通过设备动效与状态图形直接演示模式变化，让用户在设置前即可理解功能作用。' : description}</Story>
         <section className="media-block media-stack reverse"><div><Placeholder number={23} projectSlug={slug} /><Placeholder number={24} projectSlug={slug} /></div><Placeholder number={25} projectSlug={slug} /></section>
         <section className="media-block"><Placeholder number={26} projectSlug={slug} /></section>
         <section className="media-block"><Placeholder number={27} projectSlug={slug} /></section>
         <section className="media-block"><Placeholder number={28} projectSlug={slug} /></section>
         <section className="media-block"><Placeholder number={29} projectSlug={slug} /></section>
-        {slug === 'common-ground' && <>
+        {slug === 'dji-romo' && <>
           <Story title="项目结果" titleEn="PROJECT OUTCOME" subtitle="内部认可与外部专业评价" subtitleEn="Internal recognition and external professional feedback" childrenEn="ROMO received a departmental Excellence Project Award. After launch, multiple leading KOLs gave positive feedback on the software design in their reviews.">ROMO 获得部门颁发的卓越项目奖。产品发布后，多位头部 KOL 在评测内容中对软件设计给予正向评价。</Story>
           <section className="media-block media-pair" aria-label="Project results media"><Placeholder number={30} projectSlug={slug} showSlotNumber={false} /><Placeholder number={31} projectSlug={slug} showSlotNumber={false} /></section>
         </>}

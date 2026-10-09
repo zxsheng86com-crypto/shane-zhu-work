@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 const { chromium, webkit } = await import(process.argv[2] || 'playwright');
 const browser = await (process.argv.includes('--webkit') ? webkit.launch() : chromium.launch({ channel: 'chrome', headless: true }));
 try {
-  for (const slug of ['common-ground', 'dji-avinox', 'dji-power', 'dji-aura-logo']) {
+  for (const slug of ['dji-romo', 'dji-avinox', 'dji-power', 'dji-aura']) {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     let release;
     const held = new Promise(resolve => { release = resolve; });

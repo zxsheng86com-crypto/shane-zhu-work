@@ -1,4 +1,9 @@
 {
+  "redirects": [
+    { "source": "/work/common-ground", "destination": "/work/dji-romo", "permanent": true },
+    { "source": "/work/dji-fly", "destination": "/work/fly-fpv-2-0", "permanent": true },
+    { "source": "/work/dji-aura-logo", "destination": "/work/dji-aura", "permanent": true }
+  ],
   "headers": [
     {
       "source": "/media/:path*",

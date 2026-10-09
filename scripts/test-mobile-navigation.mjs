@@ -3,7 +3,7 @@ const { chromium, webkit } = await import(process.argv[2] || 'playwright');
 const browser = await (process.argv.includes('--webkit') ? webkit.launch({ headless: true }) : chromium.launch({ channel: 'chrome', headless: true }));
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
-  await page.goto('http://localhost:3000/work/common-ground');
+  await page.goto('http://localhost:3000/work/dji-romo');
   const toggle = page.locator('.nav-toggle');
   const nav = page.locator('#main-navigation');
   assert.equal(await nav.isVisible(), false);
@@ -52,7 +52,7 @@ try {
   assert.equal(await page.locator('.nav-desktop').isVisible(), true);
   assert.equal(await page.locator('.nav-clock').isVisible(), true);
   const native = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, javaScriptEnabled: false });
-  await native.goto('http://localhost:3000/work/common-ground');
+  await native.goto('http://localhost:3000/work/dji-romo');
   await native.locator('.nav-toggle').tap();
   assert.equal(await native.locator('#main-navigation').isVisible(), true, 'Touch opens menu even before hydration');
   await native.locator('.nav-toggle').tap();

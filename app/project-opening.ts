@@ -11,11 +11,11 @@ export type OpeningPack = {
 
 /** Browse order used for chained opening-pack warm. */
 export const projectChain = [
-  'common-ground',
+  'dji-romo',
   'dji-avinox',
   'dji-power',
-  'dji-fly',
-  'dji-aura-logo',
+  'fly-fpv-2-0',
+  'dji-aura',
 ] as const;
 
 export type ProjectSlug = (typeof projectChain)[number];
@@ -33,9 +33,9 @@ type CaseCatalog = {
 };
 
 const catalogs: Record<ProjectSlug, CaseCatalog> = {
-  'common-ground': {
-    slug: 'common-ground',
-    href: '/work/common-ground',
+  'dji-romo': {
+    slug: 'dji-romo',
+    href: '/work/dji-romo',
     folder: 'dji-romo',
     videoSlots: new Set([2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 28, 31]),
     version: '20261008-media',
@@ -57,17 +57,17 @@ const catalogs: Record<ProjectSlug, CaseCatalog> = {
     version: '20261008-media',
     maxSlot: 18,
   },
-  'dji-fly': {
-    slug: 'dji-fly',
-    href: '/work/dji-fly',
+  'fly-fpv-2-0': {
+    slug: 'fly-fpv-2-0',
+    href: '/work/fly-fpv-2-0',
     folder: 'dji-fly',
     videoSlots: new Set([7, 8, 9, 10, 11, 12, 13, 14, 15, 19]),
     version: '20261008-media',
     maxSlot: 24,
   },
-  'dji-aura-logo': {
-    slug: 'dji-aura-logo',
-    href: '/work/dji-aura-logo',
+  'dji-aura': {
+    slug: 'dji-aura',
+    href: '/work/dji-aura',
     folder: 'dji-aura',
     videoSlots: new Set([1, 4, 8]),
     version: '20261008-media',
@@ -98,7 +98,7 @@ function itemForSlot(catalog: CaseCatalog, slot: number): CaseMediaItem | null {
   if (slot < 1 || slot > catalog.maxSlot) return null;
   const version = catalog.slug === 'dji-avinox' && slot === 8
     ? '20261008-avinox-08'
-    : catalog.slug === 'dji-fly' && [7, 8, 10].includes(slot)
+    : catalog.slug === 'fly-fpv-2-0' && [7, 8, 10].includes(slot)
       ? `20261008-fly-${pad2(slot)}`
       : catalog.version;
   if (catalog.videoSlots.has(slot)) {
@@ -140,11 +140,11 @@ function packFromCatalog(catalog: CaseCatalog): OpeningPack {
 }
 
 export const openingPacks: Record<ProjectSlug, OpeningPack> = {
-  'common-ground': packFromCatalog(catalogs['common-ground']),
+  'dji-romo': packFromCatalog(catalogs['dji-romo']),
   'dji-avinox': packFromCatalog(catalogs['dji-avinox']),
   'dji-power': packFromCatalog(catalogs['dji-power']),
-  'dji-fly': packFromCatalog(catalogs['dji-fly']),
-  'dji-aura-logo': packFromCatalog(catalogs['dji-aura-logo']),
+  'fly-fpv-2-0': packFromCatalog(catalogs['fly-fpv-2-0']),
+  'dji-aura': packFromCatalog(catalogs['dji-aura']),
 };
 
 const warmed = new Set<string>();

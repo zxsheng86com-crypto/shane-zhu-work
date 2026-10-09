@@ -4,11 +4,11 @@ const { chromium, webkit } = imported.default ?? imported;
 const browser = await (process.argv.includes('--webkit') ? webkit.launch() : chromium.launch({ channel: 'chrome', headless: true }));
 try {
   const projects = [
-    ['common-ground', 31],
+    ['dji-romo', 31],
     ['dji-avinox', 32],
     ['dji-power', 18],
-    ['dji-fly', 24],
-    ['dji-aura-logo', 12],
+    ['fly-fpv-2-0', 24],
+    ['dji-aura', 12],
   ];
   const mobile = !process.argv.includes('--desktop');
   for (const [slug, count] of projects) {
@@ -47,7 +47,7 @@ try {
     if (new URL(state.src).pathname.endsWith('.mp4')) {
       assert.equal(state.src.includes('/mobile/'), mobile);
     }
-    if (slug === 'dji-aura-logo' && index === 3) {
+    if (slug === 'dji-aura' && index === 3) {
       const delay = await media.evaluate(e => new Promise((resolve, reject) => {
         let endedAt;
         const timeout = setTimeout(() => reject(new Error('Loop replay timed out')), 8000);

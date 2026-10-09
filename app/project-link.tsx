@@ -5,10 +5,10 @@ import { Localized } from './localized';
 import type { ProjectData } from './site';
 
 const projectEntryVideos: Record<string, string> = {
-  'common-ground': '/media/dji-romo/02.mp4?v=20260911-r1',
+  'dji-romo': '/media/dji-romo/02.mp4?v=20260911-r1',
   'dji-avinox': '/media/dji-avinox/02.mp4?v=20260911-r1',
   'dji-power': '/media/dji-power/03.mp4?v=20260911-r1',
-  'dji-aura-logo': '/media/dji-aura/04.mp4?v=20260911-r1',
+  'dji-aura': '/media/dji-aura/04.mp4?v=20260911-r1',
 };
 
 export function ProjectLink({ project, featuredIndex }: { project: ProjectData; featuredIndex?: number }) {

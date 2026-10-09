@@ -5,7 +5,7 @@ try {
   const page = await browser.newPage();
   for (const width of [390, 768, 1024]) {
     await page.setViewportSize({ width, height: 844 });
-    for (const slug of ['common-ground', 'dji-avinox', 'dji-aura-logo']) {
+    for (const slug of ['dji-romo', 'dji-avinox', 'dji-aura']) {
       await page.goto(`http://localhost:3000/work/${slug}`);
       for (const stack of await page.locator('.media-stack').all()) {
         await stack.scrollIntoViewIfNeeded();
