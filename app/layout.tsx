@@ -5,7 +5,7 @@ import { ShaneGridHydrate } from './shane-grid-hydrate';
 import { SiteFoot } from './site-foot';
 
 export const metadata: Metadata = {
-  title: 'Your Name — Selected Work',
+  title: 'Shane Zhu-UI Designer',
   description: 'Independent designer portfolio and selected case studies.',
 };
 
