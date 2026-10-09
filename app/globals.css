@@ -1,7 +1,9 @@
 @font-face{font-family:Aspekta;src:url('/fonts/AspektaVF.woff2') format('woff2-variations');font-style:normal;font-weight:50 1000;font-display:swap}
-:root{--bg:#000;--white:#f7f7f7;--muted:#828282;--soft:#999;--line:rgba(255,255,255,.12);--line-soft:rgba(255,255,255,.08);--panel:#27292d;--nav-muted:#828282;--nav-faint:#666;--text-80:rgba(255,255,255,.8);--text-64:rgba(255,255,255,.64);--text-48:rgba(255,255,255,.48);--text-36:rgba(255,255,255,.36);--text-20:rgba(255,255,255,.2);--surface:#151515;--surface-text:rgba(255,255,255,.48);--button-bg:#f7f7f7;--button-text:#121212;--focus:#f7f7f7;--scroll-track:#222;--scroll-thumb:#666;--sg-gutter-left:0.9375vw;--sg-gutter-right:1.868vw;--project-cover-radius:4px;--project-cover-gutter:16px;color-scheme:dark}
+:root{--bg:#000;--white:#f7f7f7;--muted:#828282;--soft:#999;--line:rgba(255,255,255,.12);--line-soft:rgba(255,255,255,.08);--panel:#27292d;--nav-muted:#828282;--nav-faint:#666;--text-80:rgba(255,255,255,.8);--text-64:rgba(255,255,255,.64);--text-48:rgba(255,255,255,.48);--text-36:rgba(255,255,255,.36);--text-20:rgba(255,255,255,.2);--surface:#151515;--surface-text:rgba(255,255,255,.48);--button-bg:#f7f7f7;--button-text:#121212;--focus:#f7f7f7;--sg-gutter-left:0.9375vw;--sg-gutter-right:1.868vw;--project-cover-radius:4px;--project-cover-gutter:16px;color-scheme:dark}
 *{box-sizing:border-box}
-html{background:var(--bg);scrollbar-gutter:stable}
+html{background:var(--bg)}
+html,body{scrollbar-width:none;-ms-overflow-style:none}
+html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;width:0;height:0}
 body{margin:0;background:var(--bg);color:var(--white);font-family:Aspekta,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',Arial,sans-serif;font-size:16px;font-weight:400;line-height:1.2;-webkit-font-smoothing:antialiased}
 .lang-en{font-family:Aspekta,Arial,sans-serif}.lang-zh{display:none!important;font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei',Arial,sans-serif}html[data-lang="zh"] .lang-en{display:none!important}html[data-lang="zh"] .lang-zh{display:inline!important}
 /* CJK face for page content only — nav stays Aspekta so E/Z + Work/About never reflow. */
@@ -154,8 +156,6 @@ body:has(.work-index) .nav-home{background:#000}
 .home-motion.motion-ready .home-footer>*{opacity:0;transform:translate3d(0,20px,0);transition:opacity .65s cubic-bezier(.16,1,.3,1),transform .65s cubic-bezier(.16,1,.3,1)}
 .home-motion.motion-ready .home-footer.is-visible>*{opacity:1;transform:none}.home-motion.motion-ready .home-footer.is-visible>*:nth-child(2){transition-delay:.06s}.home-motion.motion-ready .home-footer.is-visible>*:nth-child(3){transition-delay:.12s}.home-motion.motion-ready .home-footer.is-visible>*:nth-child(4){transition-delay:.18s}
 @media(hover:hover){.home-work-heading a:hover,.home-footer a:hover{color:var(--text-80)}.project-card:hover .card-media::after{opacity:1}}
-html:has(.home-projects){scrollbar-color:var(--scroll-thumb) var(--scroll-track);scrollbar-width:thin}
-html:has(.home-projects)::-webkit-scrollbar{width:9px}html:has(.home-projects)::-webkit-scrollbar-track{background:var(--scroll-track)}html:has(.home-projects)::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:9px}
 .card-media{position:relative;overflow:hidden;aspect-ratio:4/3;background:var(--panel);border-radius:var(--project-cover-radius)}
 .card-media::after{content:"";position:absolute;inset:0;z-index:1;background:rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s ease}
 .card-media>img,.card-media>video{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none;user-select:none;-webkit-user-drag:none}
