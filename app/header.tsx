@@ -73,7 +73,7 @@ export function Header() {
     </button>
   );
 
-  const links = <><Link className={pathname === '/work' ? 'active' : ''} href="/work" aria-label="Work" aria-current={pathname === '/work' ? 'page' : undefined}>Work</Link><Link className={pathname.startsWith('/about') ? 'active' : ''} href="/about" aria-label="About" aria-current={pathname.startsWith('/about') ? 'page' : undefined}>About</Link></>;
+  const links = <><Link className={pathname === '/work' ? 'active' : ''} href="/work" aria-label="Work" aria-current={pathname === '/work' ? 'page' : undefined}><span>Work</span></Link><Link className={pathname.startsWith('/about') ? 'active' : ''} href="/about" aria-label="About" aria-current={pathname.startsWith('/about') ? 'page' : undefined}><span>About</span></Link></>;
 
   /* the designed logo mark is used on every page */
   const identity = <img className="nav-logo" src="/logo.svg" alt="Shane Zhu" data-pin-nopin="true" data-pin-no-hover="true" />;
@@ -97,7 +97,7 @@ export function Header() {
     >
       <span aria-hidden="true" /><span aria-hidden="true" />
     </button>
-    <nav id="main-navigation" className="nav-mobile" aria-label="Mobile navigation" hidden={!menuOpen}>
+    <nav id="main-navigation" className="nav-mobile" aria-label="Mobile navigation" aria-hidden={!menuOpen} inert={!menuOpen}>
       {links}{languageToggle}
     </nav>
   </header>;

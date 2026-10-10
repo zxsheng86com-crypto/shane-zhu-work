@@ -11,14 +11,10 @@ const experience = [
     role: 'Senior UI Designer',
     roleZh: '高级 UI 设计师',
     details: [
-      ['Innovation Business', 'Interface design for ROMO, AVINOX and DJI Power, extending one visual language across intelligent hardware and companion apps.'],
-      ['Consumer Drones', 'Visual redesign for DJI Fly flight-control module 2.0, serving both professional pilots and new users across the product line.'],
-      ['Handheld', 'Album experience redesign for DJI Mimo and brand identity design for DJI AURA cloud album service.'],
+      ['', 'Independently led UI design for products across multiple categories, including DJI ROMO (robot vacuum), AVINOX (electric-assist mountain bike system) and DJI Power (portable power station), and led the visual redesign of DJI Fly flight-control module 2.0.'],
     ],
     detailsZh: [
-      ['创新业务线', '负责 ROMO、AVINOX 与 DJI Power 等多品类硬件产品的界面设计，统一 App 与硬件的视觉语言。'],
-      ['消费飞机业务线', '主导 DJI Fly 飞控模块 2.0 视觉重构升级，覆盖全系列机型。'],
-      ['手持业务线', '负责 DJI Mimo App 相册模块重构升级，以及 DJI AURA 云相册品牌图形设计。'],
+      ['', '独立负责多品类产品的 UI 设计，涵盖 DJI ROMO（扫地机器人）、AVINOX（电助力山地自行车系统）、DJI Power（户外电源）等创新项目，并主导 DJI Fly 飞控模块 2.0 的视觉升级。'],
     ],
   },
   {
@@ -26,10 +22,10 @@ const experience = [
     periodZh: '2019 – 2021',
     company: 'CVTE',
     companyZh: '视源股份',
-    role: 'UI Designer · Education Hardware',
-    roleZh: '教育硬件 UI 设计师',
-    details: [['SEEWO', 'Led brand, interface and motion design for smart hardware products, plus the SEEWO HomeTime mini program and Education Cube web platform.']],
-    detailsZh: [['希沃', '主导智能硬件产品的品牌、UI 与动效设计，以及希沃家时光小程序和教育魔方后台 Web 设计。']],
+    role: 'UI Designer',
+    roleZh: 'UI设计师',
+    details: [['', 'Led brand, UI and motion design for SEEWO projects, including the Cloud Screen mini program and Education Cube web platform.']],
+    detailsZh: [['', '主导希沃相关项目的品牌、UI 与动效设计，并负责希沃云屏小程序及教育魔方后台 Web 设计。']],
   },
   {
     period: '2018 – 2019',
@@ -38,8 +34,8 @@ const experience = [
     companyZh: '腾讯科技',
     role: 'Visual Designer',
     roleZh: '视觉设计师',
-    details: [['Tencent Medical Dictionary', 'Visual iteration for core modules across Tencent Medical Dictionary and Huiyongyao mini programs.']],
-    detailsZh: [['腾讯医典', '负责腾讯医典、慧用药小程序多个核心模块的视觉改版与迭代。']],
+    details: [['', 'Visual iteration for core modules across Tencent Medical Dictionary and Huiyongyao mini programs.']],
+    detailsZh: [['', '负责腾讯医典、慧用药小程序多个核心模块的视觉改版与迭代。']],
   },
 ];
 
@@ -50,7 +46,7 @@ export default function About() {
     <main className="about-reference">
       <section className="about-intro about-reference-grid">
         <div className="about-reference-label"><Localized en="Introduction" zh="介绍" /></div>
-        <h1><Localized en="I'm Shane Zhu, a UI designer with 8 years of experience focused on intelligent hardware GUI and cross-device mobile experiences. I have worked at Tencent, CVTE and DJI. I have led interface design for products across categories, including flight-control systems, robot-vacuum apps and E-bike displays, spanning device and mobile experiences while staying involved from concept exploration through design delivery and product release." zh="我是朱晓生。我有 8 年 UI 设计经验，专注智能硬件 GUI 与移动端跨端体验，先后任职腾讯、视源与大疆。主导过飞控系统、扫地机器人 App、E-bike 中控屏等多品类产品的界面设计，覆盖设备端与移动端体验，并持续参与项目从概念探索到设计落地与产品发布。" /></h1>
+        <h1><Localized en="I’m Shane Zhu, a UI designer with 8 years of experience in intelligent hardware and cross-device design. At Tencent, CVTE and DJI, I’ve led interfaces for flight-control systems, robot-vacuum apps and E-bike displays, from concept to launch." zh="我是朱晓生。我有 8 年 UI 设计经验，专注智能硬件 GUI 与移动端跨端体验，先后任职腾讯、视源与大疆。主导过飞控系统、扫地机器人 App、E-bike 中控屏等多品类产品的界面设计，覆盖设备端与移动端体验，并持续参与项目从概念探索到设计落地与产品发布。" /></h1>
         <figure className="about-portrait">
           <div className="about-portrait-image">
             {/* ponytail: plain img — Next/Image + progressive JPEG was blanking on Safari */}
@@ -76,8 +72,8 @@ export default function About() {
             <p className="about-reference-period"><Localized en={item.period} zh={item.periodZh} /></p>
             <div className="about-reference-company"><h3><Localized en={item.company} zh={item.companyZh} /></h3><p><Localized en={item.role} zh={item.roleZh} /></p></div>
             <div className="about-reference-detail">
-              <div className="lang-en">{item.details.map(([label, text]) => <div key={label}><h4>{label}</h4><p>{text}</p></div>)}</div>
-              <div className="lang-zh">{item.detailsZh.map(([label, text]) => <div key={label}><h4>{label}</h4><p>{text}</p></div>)}</div>
+              <div className="lang-en">{item.details.map(([label, text]) => <div key={label || text}>{label && <h4>{label}</h4>}<p>{text}</p></div>)}</div>
+              <div className="lang-zh">{item.detailsZh.map(([label, text]) => <div key={label || text}>{label && <h4>{label}</h4>}<p>{text}</p></div>)}</div>
             </div>
           </article>)}
         </div>
