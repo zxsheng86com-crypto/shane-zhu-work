@@ -77,11 +77,15 @@ function Placeholder({ number, projectSlug, tone = 'dark', showSlotNumber = true
     ? `${src}?v=20261008-avinox-08`
     : src === '/media/dji-power/09.webp'
     ? `${src}?v=20261009-power-09`
+    : src === '/media/dji-fly/21.webp'
+    ? `${src}?v=20261013-fly-21`
+    : src && projectSlug === 'fly-fpv-2-0' && slot === 10
+      ? `${src}?v=20261013-fly-10`
     : src && projectSlug === 'dji-power'
     ? `${src}?v=20261008-media`
     : src && projectSlug === 'dji-aura'
       ? `${src}?v=20261008-media`
-    : src && projectSlug === 'fly-fpv-2-0' && [7, 8, 10].includes(slot)
+    : src && projectSlug === 'fly-fpv-2-0' && [7, 8].includes(slot)
       ? `${src}?v=20261008-fly-${pad2(slot)}`
       : src && projectSlug === 'fly-fpv-2-0'
         ? `${src}?v=20261008-media`
