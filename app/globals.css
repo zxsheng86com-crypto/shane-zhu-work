@@ -205,6 +205,7 @@ html[data-lang="zh"] .case-text>.case-desc>.lang-zh{display:block!important}
 .next-project{min-height:540px;padding:120px var(--sg-gutter-right,29px) 70px var(--sg-gutter-left,29px)}
 .next-project p{margin:0 0 16px;color:var(--muted)}
 .next-project a{display:flex;justify-content:space-between;font-family:inherit;font-size:56px;font-weight:400;line-height:1.2}
+.next-project a>span{font-family:Aspekta,Arial,sans-serif}
 
 .service-list,.post-list,.news-list{padding:0 16px 96px}
 .service-list article,.news-list article{display:grid;grid-template-columns:88px 1fr 1fr;gap:16px;padding:24px 0 64px;border-top:1px solid var(--line)}
