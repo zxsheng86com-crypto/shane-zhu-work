@@ -9,6 +9,7 @@ body{margin:0;background:var(--bg);color:var(--white);font-family:Aspekta,'PingF
 /* CJK face for page content only — nav stays Aspekta so E/Z + Work/About never reflow. */
 html[data-lang="zh"] body{font-family:"OPPO Sans 4.0",Arial,sans-serif}
 html[data-lang="zh"] .lang-zh{font-family:"OPPO Sans 4.0",Arial,sans-serif}
+html[data-lang="zh"] .case-study .lang-zh{font-family:Aspekta,"OPPO Sans 4.0",Arial,sans-serif}
 ::selection,::-moz-selection{background:#7d7d7d;color:#000}
 a{color:inherit;text-decoration:none}
 button{font:inherit}
