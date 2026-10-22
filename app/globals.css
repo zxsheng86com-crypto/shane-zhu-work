@@ -239,13 +239,13 @@ html[data-lang="zh"] .case-text>.case-desc>.lang-zh{display:block!important}
   .nav-toggle{
     grid-column:2;grid-row:1;justify-self:end;z-index:2;
     display:flex;flex-direction:column;align-items:flex-end;justify-content:center;
-    gap:6px;width:44px;height:44px;margin:0;padding:0;
+    gap:5.5px;width:44px;height:44px;margin:0;padding:0;
     border:0;border-radius:0;background:transparent;color:#7d7d7d;
     cursor:pointer;-webkit-tap-highlight-color:transparent;
   }
   .nav-toggle span{display:block;width:34px;height:1.5px;background:currentColor;transition:transform .2s ease}
-  .nav-home.is-menu-open .nav-toggle span:first-child{transform:translateY(4px) rotate(16deg)}
-  .nav-home.is-menu-open .nav-toggle span:last-child{transform:translateY(-4px) rotate(-16deg)}
+  .nav-home.is-menu-open .nav-toggle span:first-child{transform:translateY(3.5px) rotate(16deg)}
+  .nav-home.is-menu-open .nav-toggle span:last-child{transform:translateY(-3.5px) rotate(-16deg)}
   .nav-home .nav-mobile{
     position:fixed;inset:0;z-index:1;
     display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;
