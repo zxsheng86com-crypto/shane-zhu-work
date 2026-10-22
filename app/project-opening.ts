@@ -96,8 +96,10 @@ export type CaseMediaItem = {
 
 function itemForSlot(catalog: CaseCatalog, slot: number): CaseMediaItem | null {
   if (slot < 1 || slot > catalog.maxSlot) return null;
-  const version = catalog.slug === 'dji-avinox' && slot === 8
-    ? '20261008-avinox-08'
+  const version = catalog.slug === 'dji-avinox' && slot === 1
+    ? '20261022-avinox-01'
+    : catalog.slug === 'dji-avinox' && slot === 8
+      ? '20261008-avinox-08'
     : catalog.slug === 'fly-fpv-2-0' && [7, 8, 10].includes(slot)
       ? `20261008-fly-${pad2(slot)}`
       : catalog.version;
