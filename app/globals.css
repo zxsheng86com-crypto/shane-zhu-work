@@ -31,7 +31,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .nav-hidden{transform:none}
 .nav-identity{display:flex;align-items:center;gap:10px}
 .wordmark{display:flex;align-items:center;height:auto;color:#7d7d7d;font-size:18.75px;font-weight:500;line-height:1;letter-spacing:.2px;transition:color .25s ease}
-.nav-logo{display:block;height: 22px;width:auto;transform:translateX(-2px);transition:filter .25s ease}
+.nav-logo{display:block;height: 22px;width:auto;transform:translateX(2px);transition:filter .25s ease}
 .nav-location{display:none}
 .nav nav{display:flex;align-items:center;gap:clamp(9px,.764vw,22px);font-family:inherit;font-size:inherit;font-weight:500;line-height:1;letter-spacing:.2px;text-transform:none}
 .nav-desktop{grid-column:2;justify-self:end;font-size:18.75px;font-weight:500;letter-spacing:.2px}
@@ -275,7 +275,7 @@ html[data-lang="zh"] .case-text>.case-desc>.lang-zh{display:block!important}
   .nav-home.is-menu-open .nav-mobile>a:nth-child(2)>span{opacity:1;transform:translateY(0);transition-delay:.16s}
   .nav-home.is-menu-open .nav-mobile .language-toggle-content{opacity:1;transform:translateY(0);transition-delay:.24s}
   .nav-mobile .language-option-zh{font-size:14px}
-  .nav-logo{height:18px;transform:none}
+  .nav-logo{height:18px;transform:translateX(4px)}
   .home-hero,.page-intro,.service-hero{min-height:430px;padding:160px 16px 48px}.home-hero h1,.page-intro h1,.service-hero h1{font-size:32px;line-height:1.2}
   .project-grid,.post-list{grid-template-columns:1fr 1fr}.services-home article,.featured-heading,.service-list article,.news-list article,.service-detail,.about-grid{grid-template-columns:1fr}.services-home article>a,.about-grid a{grid-column:1}
   .next-project{min-height:380px}.next-project a{font-size:42px}
