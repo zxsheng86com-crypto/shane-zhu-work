@@ -1,27 +1,41 @@
 {
-  "redirects": [
-    { "source": "/work/common-ground", "destination": "/work/dji-romo", "permanent": true },
-    { "source": "/work/dji-fly", "destination": "/work/fly-fpv-2-0", "permanent": true },
-    { "source": "/work/dji-aura-logo", "destination": "/work/dji-aura", "permanent": true }
-  ],
-  "headers": [
+  "routes": [
+    { "src": "^/work/common-ground$", "headers": { "Location": "/work/dji-romo" }, "status": 308 },
+    { "src": "^/work/dji-fly$", "headers": { "Location": "/work/fly-fpv-2-0" }, "status": 308 },
+    { "src": "^/work/dji-aura-logo$", "headers": { "Location": "/work/dji-aura" }, "status": 308 },
     {
-      "source": "/media/:path*",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
+      "src": "^/media/.*",
+      "has": [{ "type": "header", "key": "sec-fetch-mode", "value": "navigate" }],
+      "headers": { "Cache-Control": "private, no-store" },
+      "status": 403
     },
     {
-      "source": "/_next/static/:path*",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
+      "src": "^/media/.*",
+      "has": [{ "type": "header", "key": "sec-fetch-site", "value": "cross-site|same-site|none" }],
+      "headers": { "Cache-Control": "private, no-store" },
+      "status": 403
+    },
+    {
+      "src": "^/media/.*",
+      "missing": [
+        { "type": "header", "key": "sec-fetch-site", "value": "same-origin" },
+        { "type": "header", "key": "referer", "value": "https://(www\\.)?shanezhu\\.work(/.*)?" }
+      ],
+      "headers": { "Cache-Control": "private, no-store" },
+      "status": 403
+    },
+    {
+      "src": "^/media/.*",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "Cross-Origin-Resource-Policy": "same-origin"
+      },
+      "continue": true
+    },
+    {
+      "src": "^/_next/static/.*",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
+      "continue": true
     }
   ]
 }
