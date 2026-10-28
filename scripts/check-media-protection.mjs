@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { request } from 'node:https';
 
 // Run against a Vercel deployment; next dev does not apply vercel.json routes.
 const base = process.argv[2];
@@ -7,15 +8,17 @@ const image = '/media/dji-avinox/01.webp';
 const origin = new URL(base).origin;
 
 async function check(label, path, headers, expected, method = 'HEAD') {
-  const response = await fetch(new URL(path, base), { method, headers, redirect: 'manual' });
-  assert.equal(response.status, expected, `${label}: expected ${expected}, got ${response.status}`);
+  const response = await new Promise((resolve, reject) => {
+    request(new URL(path, base), { method, headers }, resolve).on('error', reject).end();
+  });
+  response.destroy();
+  assert.equal(response.statusCode, expected, `${label}: expected ${expected}, got ${response.statusCode}`);
   if (expected === 403) {
-    assert.match(response.headers.get('cache-control') ?? '', /no-store/);
-    assert.doesNotMatch(response.headers.get('content-type') ?? '', /image\/|video\//);
-    assert.equal(response.headers.get('x-vercel-mitigated'), 'deny');
+    assert.match(response.headers['cache-control'] ?? '', /no-store/);
+    assert.doesNotMatch(response.headers['content-type'] ?? '', /image\/|video\//);
+    assert.equal(response.headers['x-vercel-mitigated'], 'deny');
   }
-  if (expected === 206) assert.match(response.headers.get('content-range') ?? '', /^bytes 0-1023\//);
-  await response.body?.cancel();
+  if (expected === 206) assert.match(response.headers['content-range'] ?? '', /^bytes 0-1023\//);
   console.log(`PASS ${label}`);
 }
 
