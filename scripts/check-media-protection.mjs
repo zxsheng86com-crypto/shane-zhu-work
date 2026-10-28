@@ -9,7 +9,11 @@ const origin = new URL(base).origin;
 async function check(label, path, headers, expected, method = 'HEAD') {
   const response = await fetch(new URL(path, base), { method, headers, redirect: 'manual' });
   assert.equal(response.status, expected, `${label}: expected ${expected}, got ${response.status}`);
-  if (expected === 403) assert.match(response.headers.get('cache-control') ?? '', /no-store/);
+  if (expected === 403) {
+    assert.match(response.headers.get('cache-control') ?? '', /no-store/);
+    assert.doesNotMatch(response.headers.get('content-type') ?? '', /image\/|video\//);
+    assert.equal(response.headers.get('x-vercel-mitigated'), 'deny');
+  }
   if (expected === 206) assert.match(response.headers.get('content-range') ?? '', /^bytes 0-1023\//);
   await response.body?.cancel();
   console.log(`PASS ${label}`);

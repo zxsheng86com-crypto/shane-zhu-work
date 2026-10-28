@@ -7,13 +7,13 @@
       "src": "^/media/.*",
       "has": [{ "type": "header", "key": "sec-fetch-mode", "value": "navigate" }],
       "headers": { "Cache-Control": "private, no-store" },
-      "status": 403
+      "mitigate": { "action": "deny" }
     },
     {
       "src": "^/media/.*",
       "has": [{ "type": "header", "key": "sec-fetch-site", "value": "cross-site|same-site|none" }],
       "headers": { "Cache-Control": "private, no-store" },
-      "status": 403
+      "mitigate": { "action": "deny" }
     },
     {
       "src": "^/media/.*",
@@ -22,7 +22,7 @@
         { "type": "header", "key": "referer", "value": "https://(www\\.)?shanezhu\\.work(/.*)?" }
       ],
       "headers": { "Cache-Control": "private, no-store" },
-      "status": 403
+      "mitigate": { "action": "deny" }
     },
     {
       "src": "^/media/.*",
