@@ -20,7 +20,7 @@ assert.equal(loginPage.status, 200);
 const loginHtml = await loginPage.text();
 assert(!loginHtml.includes(password));
 assert.equal((loginHtml.match(/<input /g) || []).length, 1);
-assert.match(loginHtml, /maxlength="6"/);
+assert.match(loginHtml, /maxlength="9"/);
 assert(!/<button|<h1|<label/.test(loginHtml));
 assert.match(loginPage.headers.get('content-security-policy'), /script-src 'nonce-/);
 assert.equal((await send('/fonts/AspektaVF.woff2', { method: 'HEAD' })).status, 200);
