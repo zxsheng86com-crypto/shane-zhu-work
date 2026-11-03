@@ -12,23 +12,21 @@ function accessPage(error = false, status = 200) {
   return new NextResponse(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Shane Zhu · 访问验证</title><style>
 @font-face{font-family:Aspekta;src:url('/fonts/AspektaVF.woff2') format('woff2-variations');font-weight:50 1000;font-display:swap}
 *{box-sizing:border-box}body{margin:0;min-height:100svh;background:#000;color:#828282;font:400 24px/1 Aspekta,Arial,sans-serif;-webkit-font-smoothing:antialiased;color-scheme:dark}
-main{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(calc(100% - 48px),280px)}form{position:relative;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;isolation:isolate}
-.slot{display:grid;place-items:center;aspect-ratio:1;border-radius:4px;background:rgba(255,255,255,.12);color:#828282;transition:background-color .16s ease;pointer-events:none}
-form:focus-within .slot.is-active{background:#828282}input{position:absolute;inset:0;z-index:1;width:100%;height:100%;padding:0;border:0;outline:0;border-radius:4px;opacity:0;cursor:text;font-size:24px;caret-color:transparent}
+main{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(calc(100% - 48px),280px)}form{position:relative}
+input{display:block;width:100%;height:48px;padding:0 0 14px;border:0;border-bottom:1px solid rgba(255,255,255,.12);outline:0;border-radius:0;background:transparent;color:#828282;caret-color:#828282;font:inherit;font-variant-numeric:tabular-nums;letter-spacing:.24em;text-align:center;transition:border-color .16s ease;appearance:none}
+input:focus{border-bottom-color:#7d7d7d}
 form.is-busy{opacity:.64}.is-error{animation:shake .4s ease-out}.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .loader{display:none;position:relative;overflow:hidden;width:min(160px,28vw);height:1px;margin:auto;background:rgba(255,255,255,.12)}.loader i{position:absolute;inset:0;background:#7d7d7d;transform:scaleX(.25);transform-origin:left;animation:loading 1s ease-in-out infinite}
 .is-unlocked form{display:none}.is-unlocked .loader{display:block}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
 @keyframes loading{0%{transform:translateX(-30%) scaleX(.25)}100%{transform:translateX(100%) scaleX(.25)}}
-@media(max-width:480px){form{gap:6px}}
-@media(prefers-reduced-motion:reduce){.is-error,.loader i{animation:none}.slot{transition:none}.is-error .slot{background:#444}.loader i{transform:scaleX(.25)}}
-</style></head><body><main><form method="post" aria-label="作品集访问验证"${error ? ' class="is-error"' : ''}><input id="password" name="password" type="password" aria-label="六位访问密码" inputmode="numeric" pattern="[0-9]{6}" autocomplete="current-password" maxlength="6" required autofocus>${Array.from({ length: 6 }, (_, index) => `<span class="slot${index === 0 ? ' is-active' : ''}" aria-hidden="true"></span>`).join('')}</form><div class="loader" role="progressbar" aria-label="正在加载作品集"><i></i></div><span class="sr-only" role="status" aria-live="polite"></span></main><script nonce="${nonce}">
-const form=document.querySelector('form'),input=document.querySelector('input'),slots=[...document.querySelectorAll('.slot')],status=document.querySelector('[role=status]');
+@media(prefers-reduced-motion:reduce){.is-error,.loader i{animation:none}input{transition:none}.is-error input{opacity:.5}.loader i{transform:scaleX(.25)}}
+</style></head><body><main><form method="post" novalidate aria-label="作品集访问验证"${error ? ' class="is-error"' : ''}><input id="password" name="password" type="text" aria-label="六位访问密码" inputmode="numeric" pattern="[0-9]{6}" autocomplete="off" maxlength="6" required autofocus></form><div class="loader" role="progressbar" aria-label="正在加载作品集"><i></i></div><span class="sr-only" role="status" aria-live="polite"></span></main><script nonce="${nonce}">
+const form=document.querySelector('form'),input=document.querySelector('input'),status=document.querySelector('[role=status]');
 let busy=false;
-function render(){slots.forEach((slot,index)=>{slot.textContent=input.value[index]?'•':'';slot.classList.toggle('is-active',index===input.value.length)})}
-function reject(message){busy=false;input.readOnly=false;form.classList.remove('is-busy','is-error');void form.offsetWidth;form.classList.add('is-error');status.textContent=message;input.value='';render();input.focus()}
+function reject(message){busy=false;input.readOnly=false;form.classList.remove('is-busy','is-error');void form.offsetWidth;form.classList.add('is-error');status.textContent=message;input.value='';input.focus()}
 async function verify(){if(busy||input.value.length!==6)return;busy=true;input.readOnly=true;form.classList.add('is-busy');form.setAttribute('aria-busy','true');status.textContent='';try{const response=await fetch(location.pathname+location.search,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json'},body:new URLSearchParams({password:input.value}),cache:'no-store'});if(response.status===204){input.value='';document.body.classList.add('is-unlocked');location.assign(response.headers.get('Location')||'/');return}reject(response.status===401?'密码错误，请重新输入。':'暂时无法验证，请重试。')}catch{reject('连接失败，请重新输入。')}finally{form.removeAttribute('aria-busy')}}
-input.addEventListener('input',()=>{input.value=input.value.replace(/[^0-9]/g,'').slice(0,6);render();void verify()});
+input.addEventListener('input',()=>{input.value=input.value.replace(/[^0-9]/g,'').slice(0,6);form.classList.remove('is-error');void verify()});
 form.addEventListener('submit',event=>{event.preventDefault();void verify()});
 form.addEventListener('animationend',()=>form.classList.remove('is-error'));
 </script></body></html>`, {
