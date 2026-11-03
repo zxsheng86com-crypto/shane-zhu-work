@@ -17,13 +17,25 @@ for (const path of ['/media/dji-romo/01.webp', '/work/dji-romo?_rsc=test']) {
 }
 const loginPage = await send('/access?next=/work/dji-romo');
 assert.equal(loginPage.status, 200);
-assert(!(await loginPage.text()).includes(password));
+const loginHtml = await loginPage.text();
+assert(!loginHtml.includes(password));
+assert.equal((loginHtml.match(/class="slot(?: is-active)?"/g) || []).length, 9);
+assert(!/<button|<h1|<label/.test(loginHtml));
+assert.match(loginPage.headers.get('content-security-policy'), /script-src 'nonce-/);
+assert.equal((await send('/fonts/AspektaVF.woff2', { method: 'HEAD' })).status, 200);
 const post = (value, originHeader = origin) => send('/access?next=/work/dji-romo', {
   method: 'POST', headers: { origin: originHeader, 'content-type': 'application/x-www-form-urlencoded' },
   body: new URLSearchParams({ password: value }),
 });
 assert.equal((await post('wrong-test-input')).status, 401);
 assert.equal((await post(password, 'https://example.com')).status, 403);
+const automatic = await send('/access?next=/work/dji-romo', {
+  method: 'POST', headers: { origin, 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+  body: new URLSearchParams({ password }),
+});
+assert.equal(automatic.status, 204);
+assert.equal(new URL(automatic.headers.get('location'), base).pathname, '/work/dji-romo');
+assert(automatic.headers.get('set-cookie'));
 const login = await post(password);
 assert.equal(login.status, 303);
 assert.equal(new URL(login.headers.get('location'), base).pathname, '/work/dji-romo');
