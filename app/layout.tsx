@@ -5,7 +5,6 @@ import { CustomCursor } from './custom-cursor';
 import { ShaneGridHydrate } from './shane-grid-hydrate';
 import { SiteFoot } from './site-foot';
 import { MediaProtection } from './media-protection';
-import { AccessGuard } from './access-guard';
 
 export const metadata: Metadata = {
   title: 'Shane Zhu-UI Designer',
@@ -21,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-lang="en" suppressHydrationWarning>
       <head><meta name="pinterest" content="nopin" /><script dangerouslySetInnerHTML={{ __html: "try{const l=localStorage.getItem('portfolio-language');if(l==='zh'){document.documentElement.dataset.lang='zh';document.documentElement.lang='zh-CN'}}catch{}" }} /></head>
-      <body><AccessGuard /><MediaProtection /><ShaneGridHydrate /><CustomCursor />{children}<SiteFoot /><Analytics /></body>
+      <body><MediaProtection /><ShaneGridHydrate /><CustomCursor />{children}<SiteFoot /><Analytics /></body>
     </html>
   );
 }
